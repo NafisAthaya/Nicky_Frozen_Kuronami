@@ -1,0 +1,11 @@
+# Abaikan folder dependency
+/Backend/vendor/
+/Frontend/node_modules/
+
+# Abaikan file environment (keamanan)
+/Backend/.env
+/Frontend/.env
+
+# File sistem
+.DS_Store
+Thumbs.db
