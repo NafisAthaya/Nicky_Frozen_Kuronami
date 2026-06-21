@@ -7,6 +7,7 @@ export default function Input({
   value,
   onChange,
   icon,
+  rightIcon,
   className = '',
   ...props
 }) {
@@ -42,6 +43,12 @@ export default function Input({
           className="w-full bg-transparent text-sm text-gray-800 placeholder-gray-400 outline-none"
           {...props}
         />
+
+        {rightIcon && (
+          <span className="ml-3 text-gray-400 cursor-pointer">
+            {rightIcon}
+          </span>
+        )}
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
+import ownerProfile from '../../assets/OwnerProfile.png';
 
 const menuItems = [
   {
@@ -158,7 +159,7 @@ export default function Sidebar() {
           sidebar-menu-item group w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium
           transition-all duration-200 text-left
           ${active
-            ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30'
+            ? 'bg-[#FF7A00] text-white shadow-lg shadow-orange-500/30'
             : item.disabled
               ? 'text-blue-300/50 cursor-not-allowed'
               : 'text-blue-100 hover:bg-white/10 hover:text-white'
@@ -172,17 +173,17 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="sidebar fixed left-0 top-0 bottom-0 w-72 bg-gradient-to-b from-[#001C55] via-[#0A2540] to-[#001030] flex flex-col z-50">
+   <aside className="fixed left-0 top-0 h-screen w-[280px] bg-[#082B7A] flex flex-col z-50">
       {/* Brand */}
       <div className="px-6 pt-6 pb-2">
         <h1 className="text-xl font-bold text-white tracking-tight">Nicky Frozen</h1>
       </div>
 
       {/* User Profile */}
-      <div className="px-6 py-4 flex items-center gap-3 border-b border-white/10 mb-2">
+      <div className="px-6 py-4 flex items-center gap-3 border-b border-[#5A7AC9]">
         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-sm overflow-hidden">
           <img
-            src={userAvatar}
+            src={ownerProfile}
             alt="Avatar"
             className="w-full h-full object-cover"
           />
@@ -194,11 +195,12 @@ export default function Sidebar() {
       </div>
 
       {/* Main Menu */}
-      <nav className="flex-1 px-4 py-2 space-y-1 overflow-y-auto scrollbar-thin">
+      <nav className="flex-1 px-6 pt-5 space-y-2 overflow-y-auto">
+
         {userRole === 'owner' && (
           <>
             {filteredMenuItems.map(renderMenuItem)}
-            <div className="my-3 border-t border-white/10" />
+            <div className="my-5 border-t border-[#5A7AC9]" />
             {filteredMenuItemsBottom.map(renderMenuItem)}
           </>
         )}
@@ -207,18 +209,18 @@ export default function Sidebar() {
 
         {(userRole === 'admin') && (
           <>
-            <div className="my-3 border-t border-white/10" />
+            <div className="my-3 border-t border-[#5A7AC9]" />
             {filteredMenuItemsBottom.map(renderMenuItem)}
           </>
         )}
 
-        <div className="my-3 border-t border-white/10" />
+        <div className="my-3 border-t border-[#5A7AC9]" />
 
         {renderMenuItem(profileItem)}
       </nav>
 
       {/* Bottom Actions */}
-      <div className="px-4 pb-6 space-y-1">
+      <div className="mt-auto px-6 pb-8 space-y-3">
         {userRole === 'owner' && (
           <button
             onClick={() => navigate('/dashboard/pusat-bantuan')}

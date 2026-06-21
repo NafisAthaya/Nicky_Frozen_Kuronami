@@ -16,7 +16,7 @@ return new class extends Migration
         $table->string('name');
         $table->string('username')->unique(); // Untuk login kasir
         $table->string('password');
-        $table->enum('role', ['owner', 'kasir', 'manager']); // Hak akses tim Kuronami
+        $table->enum('role', ['owner', 'kasir', 'admin']); // Hak akses tim Kuronami
         $table->foreignId('cabang_id')->nullable()->constrained('cabangs')->onDelete('set null');
         $table->rememberToken();
         $table->timestamps();

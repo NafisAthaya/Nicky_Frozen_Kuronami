@@ -9,3 +9,11 @@
 # File sistem
 .DS_Store
 Thumbs.db
+
+/Backend/vendor/
+/Frontend/node_modules/
+
+/node_modules/
+node_modules/
+.vite/
+dist/

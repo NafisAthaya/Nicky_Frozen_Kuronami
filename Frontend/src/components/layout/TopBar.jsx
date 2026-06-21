@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import ownerProfile from '../../assets/OwnerProfile.png';
 
 export default function TopBar() {
   const [showNotifications, setShowNotifications] = useState(false);
@@ -26,7 +27,7 @@ export default function TopBar() {
   };
 
   return (
-    <header className="topbar relative sticky top-0 z-40 h-16 bg-white border-b border-gray-100 flex items-center justify-between px-8">
+    <header className="topbar relative sticky top-0 z-40 h-20 bg-[#F6F7FB] border-b border-[#E5E7EB] flex items-center justify-between px-8">
       {/* Search */}
       <div className="flex items-center gap-3 flex-1 max-w-lg">
         <div className="relative w-full">
@@ -35,8 +36,8 @@ export default function TopBar() {
           </svg>
           <input
             type="text"
-            placeholder="Cari performa, cabang, atau periode..."
-            className="w-full pl-10 pr-4 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-xl text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition-all"
+            placeholder="Cari performa..."
+            className="w-full pl-10 pr-4 py-3 text-sm bg-white border border-[#D9DCE7] rounded-2xl text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition-all"
           />
         </div>
       </div>
@@ -46,7 +47,7 @@ export default function TopBar() {
         {/* Notification Bell */}
         <button 
           onClick={handleNotificationClick}
-          className="relative w-10 h-10 flex items-center justify-center rounded-xl text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-all"
+          className="relative w-11 h-11 flex items-center justify-center rounded-xl text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-all"
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
@@ -120,35 +121,39 @@ export default function TopBar() {
         )}
 
         {/* Refresh */}
-        <button className="w-10 h-10 flex items-center justify-center rounded-xl text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-all">
+        <button className="w-11 h-11 flex items-center justify-center rounded-xl text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-all">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
         </button>
 
         {/* WiFi */}
-        <button className="w-10 h-10 flex items-center justify-center rounded-xl text-green-500 hover:bg-gray-100 transition-all">
+        <button className="w-11 h-11 flex items-center justify-center rounded-xl text-green-500 hover:bg-gray-100 transition-all">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.858 15.355-5.858 21.213 0" />
           </svg>
         </button>
 
         {/* Divider */}
-        <div className="w-px h-8 bg-gray-200 mx-1" />
+        <div className="w-px h-10 bg-[#D9DCE7] mx-2" />
 
         {/* User Profile */}
         <div className="flex items-center gap-3">
           <div className="text-right">
-            <p className="text-sm font-semibold text-gray-800">Nicky Owner</p>
-            <p className="text-xs text-gray-400">Paijo</p>
+            <p className="text-sm font-bold text-[#0B3B91]">
+            Nicky Owner
+          </p>
+          <p className="text-xs text-slate-500">
+            Owner
+          </p>
           </div>
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 overflow-hidden">
-            <img
-              src="https://ui-avatars.com/api/?name=Paijo&background=2563eb&color=fff&bold=true&size=40"
-              alt="User"
-              className="w-full h-full object-cover"
-            />
-          </div>
+          <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-md">
+          <img
+            src={ownerProfile}
+            alt="Owner"
+            className="w-full h-full object-cover"
+          />
+        </div>
         </div>
       </div>
     </header>

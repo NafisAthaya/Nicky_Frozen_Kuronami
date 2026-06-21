@@ -5,40 +5,40 @@ import Login from './pages/Login/Login';
 import BranchSelection from './pages/BranchSelection/BranchSelection';
 
 // Import Halaman Dashboard
-import AturHarga from './pages/Dashboard/AturHarga';
-import Beranda from './pages/Dashboard/Beranda';
-import CabangToko from './pages/Dashboard/CabangToko';
-import DiskonOtomatis from './pages/Dashboard/DiskonOtomatis';
-import Laporan from './pages/Dashboard/Laporan';
-import Notifikasi from './pages/Dashboard/Notifikasi';
-import PajakPembulatan from './pages/Dashboard/PajakPembulatan';
-import ProdukTerlaris from './pages/Dashboard/ProdukTerlaris';
-import Profil from './pages/Dashboard/Profil';
-import PusatBantuan from './pages/Dashboard/PusatBantuan';
-import StokBarang from './pages/Dashboard/StokBarang';
-import Transaksi from './pages/Dashboard/Transaksi';
+import AturHarga from './pages/Dashboard-Owner/AturHarga';
+import Beranda from './pages/Dashboard-Owner/Beranda';
+import CabangToko from './pages/Dashboard-Owner/CabangToko';
+import DiskonOtomatis from './pages/Dashboard-Owner/DiskonOtomatis';
+import Laporan from './pages/Dashboard-Owner/Laporan';
+import Notifikasi from './pages/Dashboard-Owner/Notifikasi';
+import PajakPembulatan from './pages/Dashboard-Owner/PajakPembulatan';
+import ProdukTerlaris from './pages/Dashboard-Owner/ProdukTerlaris';
+import Profil from './pages/Dashboard-Owner/Profil';
+import PusatBantuan from './pages/Dashboard-Owner/PusatBantuan';
+import StokBarang from './pages/Dashboard-Owner/StokBarang';
+import Transaksi from './pages/Dashboard-Owner/Transaksi';
+import ResetPassword from './pages/Login/reset-password';
+import DashboardLayout from './components/layout/DashboardLayout';
 
 export default function App() {
   return (
     <Router>
       <Routes>
         {/* Rute Awal */}
-        <Route path="/" element={<Login />} />
-        <Route path="/branch-selection" element={<BranchSelection />} />
-
-        {/* Rute Dashboard */}
-        <Route path="/dashboard" element={<Beranda />} />
-        <Route path="/dashboard/atur-harga" element={<AturHarga />} />
-        <Route path="/dashboard/cabang-toko" element={<CabangToko />} />
-        <Route path="/dashboard/diskon-otomatis" element={<DiskonOtomatis />} />
-        <Route path="/dashboard/laporan" element={<Laporan />} />
-        <Route path="/dashboard/notifikasi" element={<Notifikasi />} />
-        <Route path="/dashboard/pajak-pembulatan" element={<PajakPembulatan />} />
-        <Route path="/dashboard/produk-terlaris" element={<ProdukTerlaris />} />
-        <Route path="/dashboard/profil" element={<Profil />} />
-        <Route path="/dashboard/pusat-bantuan" element={<PusatBantuan />} />
-        <Route path="/dashboard/stok-barang" element={<StokBarang />} />
-        <Route path="/dashboard/transaksi" element={<Transaksi />} />
+        <Route path="/dashboard" element={<DashboardLayout />}>
+        <Route index element={<Beranda />} />
+        <Route path="notifikasi" element={<Notifikasi />} />
+        <Route path="stok-barang" element={<StokBarang />} />
+        <Route path="laporan" element={<Laporan />} />
+        <Route path="transaksi" element={<Transaksi />} />
+        <Route path="atur-harga" element={<AturHarga />} />
+        <Route path="diskon-otomatis" element={<DiskonOtomatis />} />
+        <Route path="pajak-pembulatan" element={<PajakPembulatan />} />
+        <Route path="cabang-toko" element={<CabangToko />} />
+        <Route path="profil" element={<Profil />} />
+        <Route path="pusat-bantuan" element={<PusatBantuan />} />
+        <Route path="produk-terlaris" element={<ProdukTerlaris />} />
+        </Route>
       </Routes>
     </Router>
   );
