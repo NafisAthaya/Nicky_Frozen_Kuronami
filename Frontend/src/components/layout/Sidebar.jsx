@@ -5,7 +5,7 @@ const menuItems = [
   {
     id: 'beranda',
     label: 'Beranda',
-    path: '/dashboard',
+    path: '/owner',
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
@@ -15,7 +15,7 @@ const menuItems = [
   {
     id: 'stok',
     label: 'Stok Barang',
-    path: '/dashboard/stok-barang',
+    path: '/owner/stok-barang',
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
@@ -25,7 +25,7 @@ const menuItems = [
   {
     id: 'laporan',
     label: 'Laporan',
-    path: '/dashboard/laporan',
+    path: '/owner/laporan',
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -35,7 +35,7 @@ const menuItems = [
   {
     id: 'transaksi',
     label: 'Transaksi',
-    path: '/dashboard/transaksi',
+    path: '/owner/transaksi',
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -45,7 +45,7 @@ const menuItems = [
   {
     id: 'atur-harga',
     label: 'Atur Harga',
-    path: '/dashboard/atur-harga',
+    path: '/owner/atur-harga',
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -55,7 +55,7 @@ const menuItems = [
   {
     id: 'diskon',
     label: 'Diskon Otomatis',
-    path: '/dashboard/diskon-otomatis',
+    path: '/owner/diskon-otomatis',
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
@@ -68,7 +68,7 @@ const menuItemsBottom = [
   {
     id: 'pajak',
     label: '% Pajak & Pembulatan',
-    path: '/dashboard/pajak-pembulatan',
+    path: '/owner/pajak-pembulatan',
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 9l6 6m0-6h.01M9 15h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -79,7 +79,7 @@ const menuItemsBottom = [
   {
     id: 'cabang',
     label: 'Cabang Toko',
-    path: '/dashboard/cabang-toko',
+    path: '/owner/cabang-toko',
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
@@ -91,7 +91,7 @@ const menuItemsBottom = [
 const profileItem = {
   id: 'profil',
   label: 'Profil',
-  path: '/dashboard/profil',
+  path: '/owner/profil',
   icon: (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -132,7 +132,7 @@ export default function Sidebar() {
 
   const isActive = (path) => {
     if (!path) return false;
-    if (path === '/dashboard') return location.pathname === '/dashboard';
+    if (path === '/owner') return location.pathname === '/owner';
     return location.pathname.startsWith(path);
   };
 
@@ -223,7 +223,7 @@ export default function Sidebar() {
       <div className="mt-auto px-6 pb-8 space-y-3">
         {userRole === 'owner' && (
           <button
-            onClick={() => navigate('/dashboard/pusat-bantuan')}
+            onClick={() => navigate('/owner/pusat-bantuan')}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-300 hover:bg-white/5 hover:text-white transition-all duration-200"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>

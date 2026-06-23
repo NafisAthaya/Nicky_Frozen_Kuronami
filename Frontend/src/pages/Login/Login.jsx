@@ -48,18 +48,31 @@ export default function Login() {
       'user',
       JSON.stringify(data.user)
     );
+    
+    const selectedBranch = JSON.parse(
+    localStorage.getItem('selectedBranch')
+      );
+
+      if (
+        data.user.role !== 'owner' &&
+        data.user.cabang_id !== selectedBranch.id
+      ) {
+        alert('Akun tidak sesuai dengan cabang yang dipilih');
+        return;
+      }
 
     if (data.user.role === 'owner') {
-      navigate('/dashboard');
+      navigate('/owner');
     }
 
     if (data.user.role === 'admin') {
-      navigate('/admin-dashboard');
+      navigate('/admin');
     }
 
     if (data.user.role === 'kasir') {
-      navigate('/kasir-dashboard');
+      navigate('/kasir');
     }
+
   } catch (error) {
     console.error(error);
     alert('Gagal terhubung ke server');
