@@ -48,6 +48,7 @@ import GantiShift from './pages/Dashboard-Kasir/GantiShift';
 import Pengeluaran from './pages/Dashboard-Kasir/Pengeluaran';
 import ProfilKasir from './pages/Dashboard-Kasir/Profil';
 import RiwayatTransaksi from './pages/Dashboard-Kasir/RiwayatTransaksi';
+import PesananTersimpan from './pages/Dashboard-Kasir/PesananTersimpan';
 
 export default function App() {
   return (
@@ -91,11 +92,13 @@ export default function App() {
         {/* KASIR */}
         <Route path="/kasir" element={<KasirLayout />}>
         <Route index element={<DashboardKasir />} />
-
+        <Route path="tersimpan" element={<PesananTersimpan />} />
         <Route path="pengeluaran" element={<Pengeluaran />} />
         <Route path="riwayat-transaksi" element={<RiwayatTransaksi />} />
         <Route path="ganti-shift" element={<GantiShift />} />
+
         <Route path="profil" element={<ProfilKasir />} />
+
         <Route path="bantuan" element={<BantuanKasir />} />
       </Route>
 

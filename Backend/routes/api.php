@@ -10,6 +10,10 @@ use App\Http\Controllers\Api\TransaksiController;
 
 use App\Http\Controllers\Api\PengeluaranController;
 
+use App\Http\Controllers\Api\ProfileController;
+
+use App\Http\Controllers\Api\HoldOrderController;
+
 Route::get('/owner/dashboard/stats', [OwnerDashboardController::class, 'stats']);
 
 Route::post('/login', [AuthController::class, 'login']);
@@ -33,3 +37,13 @@ Route::prefix('admin')->group(function () {
     Route::post('/produk-batches', [AdminDashboardController::class, 'storeBatch']);
     Route::get('/kategoris', [AdminDashboardController::class, 'getKategoris']);
 });
+
+Route::post(
+    '/profile/photo',
+    [ProfileController::class, 'uploadPhoto']
+);
+
+Route::get('/hold-orders', [HoldOrderController::class, 'index']);
+Route::post('/hold-orders', [HoldOrderController::class, 'store']);
+Route::get('/hold-orders/{id}', [HoldOrderController::class, 'show']);
+Route::delete('/hold-orders/{id}', [HoldOrderController::class, 'destroy']);

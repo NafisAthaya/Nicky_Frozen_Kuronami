@@ -101,7 +101,6 @@ const profileItem = {
   ),
 };
 
-
 export default function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -236,6 +235,7 @@ export default function Sidebar() {
               <span>Bantuan Sistem</span>
             </button>
           )}
+
           <button
             onClick={() => setShowLogoutModal(true)}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-300 hover:bg-red-500/10 hover:text-red-200 transition-all duration-200"
@@ -253,12 +253,20 @@ export default function Sidebar() {
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div className="bg-white rounded-2xl p-6 w-[360px] shadow-2xl flex flex-col items-center">
             <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
-              <MdOutlineLogout size={32} className="text-red-500 rotate-180" />
+              <MdOutlineLogout
+                size={32}
+                className="text-red-500 rotate-180"
+              />
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Konfirmasi Keluar</h3>
+
+            <h3 className="text-xl font-bold text-gray-900 mb-2">
+              Konfirmasi Keluar
+            </h3>
+
             <p className="text-gray-500 text-center mb-6">
               Apakah Anda yakin ingin keluar?
             </p>
+
             <div className="flex w-full gap-3">
               <button
                 onClick={() => setShowLogoutModal(false)}
@@ -266,6 +274,7 @@ export default function Sidebar() {
               >
                 Batal
               </button>
+
               <button
                 onClick={handleLogout}
                 className="flex-1 py-3 px-4 rounded-xl text-sm font-bold text-white bg-red-500 hover:bg-red-600 transition-colors shadow-lg shadow-red-500/30"

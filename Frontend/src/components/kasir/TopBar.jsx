@@ -1,6 +1,51 @@
 import ownerProfile from '../../assets/OwnerProfile.png';
+import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+
 
 export default function TopBar() {
+
+  const [showProfile, setShowProfile] = useState(false);
+  const [photo, setPhoto] = useState(ownerProfile);
+  const user = JSON.parse(localStorage.getItem("user"));
+  console.log("TOPBAR USER", user);
+  const profileRef = useRef(null);
+  const navigate = useNavigate();
+
+    useEffect(() => {
+
+    const loadPhoto = () => {
+      const user = JSON.parse(localStorage.getItem("user"));
+
+      if (user?.foto) {
+        setPhoto(`http://127.0.0.1:8000/storage/${user.foto}`);
+      } else {
+        setPhoto(ownerProfile);
+      }
+    };
+
+    loadPhoto();
+
+    window.addEventListener("profile-updated", loadPhoto);
+
+    function handleClickOutside(e) {
+      if (
+        profileRef.current &&
+        !profileRef.current.contains(e.target)
+      ) {
+        setShowProfile(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      window.removeEventListener("profile-updated", loadPhoto);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+
+  }, []);
+
   return (
     <header className="h-[72px] bg-white border-b border-gray-200 px-6 flex items-center justify-between">
 
@@ -40,7 +85,10 @@ export default function TopBar() {
       </div>
 
       {/* Right */}
-      <div className="flex items-center gap-5">
+      <div
+          className="relative flex items-center gap-5"
+          ref={profileRef}
+      >
 
         {/* Wifi */}
         <button className="text-green-500">
@@ -85,19 +133,47 @@ export default function TopBar() {
           <p className="text-sm font-semibold text-gray-800">
             Minji
           </p>
+
           <p className="text-xs text-gray-500">
             Kasir • Shift Pagi: 08:00 - 15:00
           </p>
         </div>
 
-        <div className="w-10 h-10 rounded-full overflow-hidden">
+        <button
+          onClick={() => setShowProfile(!showProfile)}
+          className="w-10 h-10 rounded-full overflow-hidden border-2 border-transparent hover:border-[#FF7A00] transition"
+        >
           <img
-            src={ownerProfile}
+            src={photo}
             alt="Kasir"
             className="w-full h-full object-cover"
           />
-        </div>
+        </button>
 
+        {showProfile && (
+          <div className="absolute top-14 right-0 w-64 bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden z-50">
+
+            <div className="px-5 py-4">
+              <h3 className="font-semibold text-slate-800">
+                Minji Clarissa
+              </h3>
+
+              <p className="text-xs text-slate-500">
+                KSR-0012
+              </p>
+            </div>
+
+            <div className="border-t" />
+
+            <button
+              onClick={() => navigate('/kasir/profil')}
+              className="w-full px-5 py-3 flex items-center gap-2 text-sm hover:bg-slate-50"
+            >
+              Pengaturan Akun
+            </button>
+
+          </div>
+        )}
       </div>
     </header>
   );
