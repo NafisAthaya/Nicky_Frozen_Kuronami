@@ -1,88 +1,147 @@
 import { useState } from 'react';
-import { MdInventory2, MdManageAccounts, MdKeyboardArrowDown } from 'react-icons/md';
-import { FaWhatsapp } from 'react-icons/fa'; // Assuming react-icons/fa is available, otherwise will fallback to another icon
+import { 
+  MdOutlineInventory2, 
+  MdOutlineManageAccounts, 
+  MdKeyboardArrowDown, 
+  MdKeyboardArrowUp 
+} from 'react-icons/md';
 
 // Custom Accordion Component
-const FaqAccordion = ({ question, children, isOpen, onClick }) => {
+const FaqAccordion = ({ question, children }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
   return (
-    <div className={`faq-item ${isOpen ? 'faq-item--expanded' : ''}`}>
-      <div className="faq-item__header" onClick={onClick}>
-        <span className="faq-item__question">{question}</span>
-        <MdKeyboardArrowDown className="faq-item__toggle-icon" />
+    <div className={`rounded-xl border mb-3 overflow-hidden transition-all ${isOpen ? 'border-[#a7c0e8]' : 'border-gray-200 bg-white'}`}>
+      <div
+        className={`flex justify-between items-center cursor-pointer p-4 transition-colors ${isOpen ? 'bg-white' : 'hover:bg-gray-50'}`}
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <span className="font-bold text-[15px] text-[#111827]">
+          {question}
+        </span>
+        {isOpen ? (
+          <MdKeyboardArrowUp className="text-gray-500" size={20} />
+        ) : (
+          <MdKeyboardArrowDown className="text-gray-500" size={20} />
+        )}
       </div>
-      <div className="faq-item__content">
-        {children}
-      </div>
+      {isOpen && (
+        <div className="px-4 pb-4 pt-1 text-[14px] text-gray-600 bg-[#f4f7fb] leading-relaxed">
+          {children}
+        </div>
+      )}
     </div>
   );
 };
 
 export default function Bantuan() {
-  const [openIndex, setOpenIndex] = useState(null);
-
-  const toggleAccordion = (index) => {
-    setOpenIndex(openIndex === index ? null : index);
-  };
-
   return (
-  <div className="max-w-5xl mx-auto p-6">
-    <div className="mb-8">
-      <h1 className="text-3xl font-bold text-blue-900">
-        Pusat Bantuan Admin
-      </h1>
-      <p className="text-gray-500 mt-2">
-        Panduan langkah-demi-langkah untuk mengelola sistem POS Nicky Frozen.
-      </p>
-    </div>
-
-    <div className="mb-8">
-      <div className="flex items-center gap-2 mb-4 border-b pb-2">
-        <MdInventory2 size={24} className="text-blue-600" />
-        <h2 className="text-xl font-bold text-blue-600">
-          Stok & Gudang
-        </h2>
-      </div>
-
-      <div className="bg-white rounded-xl border p-4 mb-3">
-        <div
-          className="flex justify-between items-center cursor-pointer"
-          onClick={() => toggleAccordion(0)}
-        >
-          <span className="font-semibold">
-            Bagaimana cara menginput barang masuk dari supplier?
-          </span>
-          <MdKeyboardArrowDown />
+    <div className="flex flex-col min-h-[calc(100vh-80px)] bg-[#f8fafc] md:bg-transparent">
+      <div className="w-full flex-grow p-8">
+        <div className="mb-8">
+          <h1 className="text-[28px] font-bold text-[#0A1A3A] mb-2 tracking-tight">
+            Pusat Bantuan Admin
+          </h1>
+          <p className="text-gray-500 text-[15px]">
+            Panduan langkah-demi-langkah untuk mengelola sistem POS Nicky Frozen.
+          </p>
         </div>
 
-        {openIndex === 0 && (
-          <div className="mt-4 text-gray-600">
-            <ul className="list-disc ml-6 space-y-1">
-              <li>Buka menu Barang Masuk.</li>
-              <li>Klik Tambah Stok Masuk.</li>
-              <li>Pilih barang.</li>
-              <li>Masukkan jumlah stok.</li>
-              <li>Simpan data.</li>
-            </ul>
+        {/* Stok & Gudang Section */}
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-4 border-b border-gray-200 pb-3">
+            <MdOutlineInventory2 size={24} className="text-[#082B7A]" />
+            <h2 className="text-lg font-bold text-[#082B7A]">
+              Stok & Gudang
+            </h2>
           </div>
-        )}
-      </div>
-    </div>
 
-    <div className="bg-blue-800 rounded-2xl p-6 text-white flex justify-between items-center">
-      <div>
-        <h2 className="text-2xl font-bold">
-          Butuh Bantuan Darurat?
-        </h2>
-        <p className="text-blue-100 mt-2">
-          Hubungi IT Support atau Manajer Toko.
+          <FaqAccordion question="Bagaimana cara menginput barang masuk dari supplier?">
+            <p className="mb-2">Ikuti langkah berikut untuk menambah stok dari supplier. Sistem akan otomatis memperbarui jumlah barang di layar kasir.</p>
+            <ul className="list-disc ml-5 space-y-1">
+              <li>Buka menu Barang Masuk di menu sebelah kiri.</li>
+              <li>Klik tombol + Tambah Stok Masuk.</li>
+              <li>Scan barcode barang atau Cari nama barang di kolom pencarian.</li>
+              <li>Masukkan jumlah Qty (Kuantitas) barang yang diterima.</li>
+              <li>Klik tombol Simpan.</li>
+            </ul>
+          </FaqAccordion>
+
+          <FaqAccordion question="Bagaimana cara mengunduh laporan laba bersih bulanan?">
+            <p className="mb-2">Lakukan Penyesuaian Stok (Stock Opname) agar data di sistem sama dengan barang fisik di toko.</p>
+            <ol className="list-decimal ml-5 space-y-1">
+              <li>Buka menu Inventori (Stok Barang).</li>
+              <li>Buka menu Inventori (Stok Barang).</li>
+              <li>Cari barang yang ingin disesuaikan dan klik tombol Edit.</li>
+              <li>Masukkan jumlah Stok Aktual (jumlah fisik saat ini).</li>
+              <li>Wajib mengisi Catatan alasan selisih (contoh: barang rusak, salah hitung).</li>
+              <li>Klik tombol <strong>Simpan</strong>.</li>
+            </ol>
+          </FaqAccordion>
+        </div>
+
+        {/* Manajemen Kasir Section */}
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-4 border-b border-gray-200 pb-3">
+            <MdOutlineManageAccounts size={24} className="text-[#082B7A]" />
+            <h2 className="text-lg font-bold text-[#082B7A]">
+              Manajemen Kasir
+            </h2>
+          </div>
+
+          <FaqAccordion question="Bagaimana cara menyesuaikan harga jual masal jika margin laba sedang kritis?">
+            <p className="mb-2">Jika kasir salah memasukkan PIN/Password berkali-kali, akun akan terkunci. Buka akses dengan cara ini:</p>
+            <ol className="list-decimal ml-5 space-y-1">
+              <li>Buka menu Pengaturan.</li>
+              <li>Pilih Kelola Pengguna.</li>
+              <li>Cari nama kasir yang memiliki status Terkunci.</li>
+              <li>Klik tombol Buka Akses pada baris nama tersebut.</li>
+              <li>Klik Konfirmasi pada pop-up yang muncul. Status akan kembali menjadi 'Aktif' dan password akan di-reset ke default.</li>
+            </ol>
+          </FaqAccordion>
+
+          <FaqAccordion question="Bagaimana cara mengubah logo struk cetak dan jam operasional toko?">
+            <p className="mb-2">Untuk mendaftarkan pegawai baru agar bisa login ke mesin kasir:</p>
+            <ol className="list-decimal ml-5 space-y-1">
+              <li>Buka menu Pengaturan.</li>
+              <li>Pilih Kelola Pengguna.</li>
+              <li>Klik tombol biru + Tambah Pegawai Baru di pojok kanan atas.</li>
+              <li>Isi formulir Data Diri (Nama, Username, PIN awal).</li>
+              <li>Pilih opsi Role menjadi Kasir.</li>
+              <li>Klik tombol Simpan di bagian bawah formulir.</li>
+            </ol>
+          </FaqAccordion>
+        </div>
+
+        {/* Butuh Bantuan Darurat? Section */}
+        <div className="mt-8 bg-gradient-to-r from-[#0d348a] to-[#144bc4] rounded-[20px] p-8 flex flex-col md:flex-row justify-between items-start md:items-center shadow-lg">
+          <div className="mb-4 md:mb-0 max-w-lg">
+            <h2 className="text-3xl font-bold text-white mb-2 tracking-tight">
+              Butuh Bantuan Darurat?
+            </h2>
+            <p className="text-blue-100 text-[15px]">
+              Jika aplikasi error total atau mati lampu, segera hubungi Manajer Toko atau IT Support.
+            </p>
+          </div>
+          <button className="bg-white text-[#0A1A3A] hover:bg-gray-50 font-bold text-sm px-5 py-3 rounded-xl flex items-center gap-2 shadow-md transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
+              <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+              <path d="M9 12h.01"></path>
+              <path d="M12 12h.01"></path>
+              <path d="M15 12h.01"></path>
+            </svg>
+            Hubungi Admin via WhatsApp
+          </button>
+        </div>
+
+      </div>
+      
+      {/* Footer */}
+      <div className="w-full text-center pb-8 mt-auto">
+        <p className="text-[10px] font-bold text-gray-300 tracking-widest uppercase">
+          © 2026 Nicky Frozen. All rights reserved.
         </p>
       </div>
-
-      <button className="bg-white text-blue-800 px-4 py-2 rounded-lg flex items-center gap-2 font-semibold">
-        <FaWhatsapp />
-        WhatsApp
-      </button>
     </div>
-  </div>
-);
+  );
 }

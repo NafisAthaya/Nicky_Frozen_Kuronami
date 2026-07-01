@@ -1,310 +1,234 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
-  MdAdd,
   MdSearch,
-  MdChevronLeft,
-  MdChevronRight,
+  MdAdd,
   MdEdit,
   MdDelete,
+  MdChevronLeft,
+  MdChevronRight
 } from 'react-icons/md';
 
-import { useApp } from '../../context/AppContext';
-import TambahKategoriModal from '../../components/admin/TambahKategoriModal';
+import { fetchKategoris } from '../../services/adminApi';
 import SuccessModal from '../../components/admin/SuccessModal.jsx';
-import WarningModal from '../../components/admin/WarningModal';
-
-const ITEMS_PER_PAGE = 10;
+import TambahKategoriModal from '../../components/admin/TambahKategoriModal.jsx';
+import WarningModal from '../../components/admin/WarningModal.jsx';
 
 export default function KategoriItem() {
-  const { categories, deleteCategory, getProductCountForCategory } = useApp();
+  const navigate = useNavigate();
 
-  const [isTambahOpen, setIsTambahOpen] = useState(false);
-  const [isSuccessOpen, setIsSuccessOpen] = useState(false);
-  const [isDeleteWarningOpen, setIsDeleteWarningOpen] = useState(false);
-
-  const [editData, setEditData] = useState(null);
-  const [deleteTarget, setDeleteTarget] = useState(null);
-
+  const [categories, setCategories] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+  
+  // State for modals
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  
+  const [isAddEditModalOpen, setIsAddEditModalOpen] = useState(false);
+  const [editCategoryData, setEditCategoryData] = useState(null);
 
-  const filteredCategories = useMemo(() => {
-    if (!searchQuery.trim()) return categories;
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteCategoryName, setDeleteCategoryName] = useState('');
 
-    const q = searchQuery.toLowerCase();
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const data = await fetchKategoris();
+        setCategories(data);
+      } catch (error) {
+        console.error("Gagal memuat kategori:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, []);
 
-    return categories.filter(
-      (cat) =>
-        cat.name.toLowerCase().includes(q) ||
-        cat.id.toLowerCase().includes(q)
-    );
-  }, [categories, searchQuery]);
-
-  const totalPages = Math.max(
-    1,
-    Math.ceil(filteredCategories.length / ITEMS_PER_PAGE)
+  const filteredCategories = categories.filter((cat) =>
+    cat.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const paginatedCategories = useMemo(() => {
-    const start = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredCategories.slice(start, start + ITEMS_PER_PAGE);
-  }, [filteredCategories, currentPage]);
-
-  const handleSearchChange = (e) => {
-    setSearchQuery(e.target.value);
-    setCurrentPage(1);
+  const handleTambahKategori = () => {
+    setEditCategoryData(null);
+    setIsAddEditModalOpen(true);
   };
 
-  const handleOpenTambah = () => {
-    setEditData(null);
-    setIsTambahOpen(true);
+  const handleEditKategori = (cat) => {
+    setEditCategoryData(cat);
+    setIsAddEditModalOpen(true);
   };
 
-  const handleOpenEdit = (cat) => {
-    setEditData(cat);
-    setIsTambahOpen(true);
+  const handleHapusKategori = (catName) => {
+    setDeleteCategoryName(catName);
+    setIsDeleteModalOpen(true);
   };
 
-  const handleSuccessTambah = () => {
-    setIsTambahOpen(false);
-
-    setSuccessMessage(
-      editData
-        ? 'Kategori Berhasil Diperbarui'
-        : 'Kategori Berhasil Ditambahkan'
-    );
-
-    setIsSuccessOpen(true);
-    setEditData(null);
+  const handleAddEditSuccess = () => {
+    setIsAddEditModalOpen(false);
+    setSuccessMessage(editCategoryData ? 'Kategori berhasil diperbarui.' : 'Kategori baru Anda telah berhasil tersimpan.');
+    setIsSuccessModalOpen(true);
   };
 
-  const handleOpenDelete = (cat) => {
-    setDeleteTarget(cat);
-    setIsDeleteWarningOpen(true);
-  };
-
-  const handleConfirmDelete = () => {
-    if (deleteTarget) {
-      deleteCategory(deleteTarget.id);
-    }
-
-    setIsDeleteWarningOpen(false);
-    setDeleteTarget(null);
-
-    setSuccessMessage('Kategori Berhasil Dihapus');
-    setIsSuccessOpen(true);
+  const confirmDelete = () => {
+    setIsDeleteModalOpen(false);
+    setSuccessMessage(`Kategori "${deleteCategoryName}" berhasil dihapus.`);
+    setIsSuccessModalOpen(true);
   };
 
   return (
-    <div className="p-6">
-
+    <div className="p-6 md:p-8 w-full relative">
+      
       {/* Header */}
-      <div className="flex items-start justify-between mb-6">
+      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6">
         <div>
           <h1 className="text-3xl font-bold text-[#082B7A]">
             Kategori Produk
           </h1>
-
-          <p className="text-gray-500 mt-2">
+          <p className="text-gray-500 mt-2 text-sm">
             Kelola daftar kategori untuk mengorganisir produk Anda.
           </p>
         </div>
 
         <button
-          onClick={handleOpenTambah}
-          className="flex items-center gap-2 bg-[#0052CC] hover:bg-[#0043A6] text-white px-5 py-3 rounded-xl font-medium transition"
+          onClick={handleTambahKategori}
+          className="flex items-center gap-2 px-5 py-2.5 bg-[#082B7A] hover:bg-[#0B3B91] text-white font-semibold rounded-xl transition-all shadow-md shadow-blue-900/20"
         >
-          <MdAdd size={22} />
+          <MdAdd className="text-xl" />
           Tambah Kategori Baru
         </button>
       </div>
 
-      {/* Search */}
-      <div className="mb-6">
-        <div className="flex items-center bg-white border border-gray-200 rounded-xl px-4 h-12 shadow-sm">
-          <MdSearch className="text-gray-400 text-xl mr-3" />
-
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={handleSearchChange}
-            placeholder="Cari nama kategori atau ID..."
-            className="flex-1 outline-none text-sm"
-          />
-        </div>
+      {/* Search Bar */}
+      <div className="bg-white border border-gray-200 rounded-xl p-3 mb-6 flex items-center gap-3">
+        <MdSearch className="text-gray-400 text-2xl ml-2" />
+        <input
+          type="text"
+          placeholder="Cari nama kategori atau ID..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="flex-1 w-full text-sm outline-none bg-transparent"
+        />
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
-
+      <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
         <table className="w-full">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-5 py-4 text-left text-sm font-semibold text-gray-600">
+          <thead>
+            <tr className="border-b bg-gray-50">
+              <th className="px-6 py-4 text-left text-sm font-bold text-gray-500 w-32">
                 ID Kategori
               </th>
-
-              <th className="px-5 py-4 text-left text-sm font-semibold text-gray-600">
+              <th className="px-6 py-4 text-left text-sm font-bold text-gray-500">
                 Nama Kategori
               </th>
-
-              <th className="px-5 py-4 text-left text-sm font-semibold text-gray-600">
+              <th className="px-6 py-4 text-left text-sm font-bold text-gray-500 w-48">
                 Jumlah Produk
               </th>
-
-              <th className="px-5 py-4 text-left text-sm font-semibold text-gray-600">
+              <th className="px-6 py-4 text-center text-sm font-bold text-gray-500 w-32">
                 Tindakan
               </th>
             </tr>
           </thead>
-
           <tbody>
-            {paginatedCategories.length === 0 ? (
+            {loading ? (
               <tr>
-                <td colSpan="4">
-                  <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500">
-                    <p>
-                      {searchQuery
-                        ? 'Tidak ada kategori yang cocok dengan pencarian.'
-                        : 'Belum ada data kategori. Klik "Tambah Kategori Baru" untuk memulai.'}
-                    </p>
-                  </div>
+                <td colSpan="4" className="text-center py-12 text-gray-500">
+                  Memuat kategori...
+                </td>
+              </tr>
+            ) : filteredCategories.length === 0 ? (
+              <tr>
+                <td colSpan="4" className="text-center py-12 text-gray-500">
+                  {searchQuery ? `Tidak ada kategori yang cocok dengan "${searchQuery}"` : 'Belum ada data kategori.'}
                 </td>
               </tr>
             ) : (
-              paginatedCategories.map((cat) => (
-                <tr
-                  key={cat.id}
-                  className="border-b border-gray-100 hover:bg-gray-50 transition"
-                >
-                  <td className="px-5 py-4">
-                    <span className="bg-gray-100 px-3 py-1 rounded-md text-xs font-mono text-gray-700">
-                      {cat.id}
-                    </span>
-                  </td>
+              filteredCategories.map((cat, idx) => {
+                // Generate KAT-01, KAT-02, dst berdasarkan index
+                const idKategori = `KAT-${String(idx + 1).padStart(2, '0')}`;
 
-                  <td className="px-5 py-4">
-                    <div className="flex flex-col">
-                      <span className="font-semibold text-gray-800">
+                return (
+                  <tr key={idx} className="border-b last:border-0 hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4 text-gray-500 text-sm font-medium">
+                      {idKategori}
+                    </td>
+                    
+                    <td className="px-6 py-4">
+                      <span className="font-bold text-[#082B7A] text-lg">
                         {cat.name}
                       </span>
-
-                      {cat.description && (
-                        <span className="text-xs text-gray-500 mt-1">
-                          {cat.description}
-                        </span>
-                      )}
-                    </div>
-                  </td>
-
-                  <td className="px-5 py-4">
-                    <span className="font-medium text-gray-700">
-                      {getProductCountForCategory(cat.id)} Produk
-                    </span>
-                  </td>
-
-                  <td className="px-5 py-4">
-                    <div className="flex gap-2">
-
-                      <button
-                        onClick={() => handleOpenEdit(cat)}
-                        className="w-9 h-9 flex items-center justify-center rounded-lg border border-blue-200 text-blue-600 hover:bg-blue-50 transition"
-                      >
-                        <MdEdit size={18} />
-                      </button>
-
-                      <button
-                        onClick={() => handleOpenDelete(cat)}
-                        className="w-9 h-9 flex items-center justify-center rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition"
-                      >
-                        <MdDelete size={18} />
-                      </button>
-
-                    </div>
-                  </td>
-                </tr>
-              ))
+                    </td>
+                    
+                    <td className="px-6 py-4">
+                      <div className="inline-flex items-center px-3 py-1 bg-blue-50 text-blue-600 rounded-lg text-xs font-semibold">
+                        {cat.product_count} Produk
+                      </div>
+                    </td>
+                    
+                    <td className="px-6 py-4">
+                      <div className="flex items-center justify-center gap-3">
+                        <button 
+                          onClick={() => handleEditKategori(cat)}
+                          className="text-gray-400 hover:text-blue-600 transition-colors"
+                          title="Edit"
+                        >
+                          <MdEdit size={22} />
+                        </button>
+                        <button 
+                          onClick={() => handleHapusKategori(cat.name)}
+                          className="text-gray-400 hover:text-red-600 transition-colors"
+                          title="Hapus"
+                        >
+                          <MdDelete size={22} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
 
-        {/* Footer Pagination */}
-        <div className="flex items-center justify-between px-5 py-4 border-t bg-white">
-
+        {/* Footer / Pagination */}
+        <div className="border-t border-gray-200 px-6 py-4 flex items-center justify-between bg-white">
           <span className="text-sm text-gray-500">
-            Menampilkan {paginatedCategories.length} dari{' '}
-            {filteredCategories.length} kategori
+            Menampilkan 1-{filteredCategories.length} dari {filteredCategories.length} kategori
           </span>
-
+          
           <div className="flex items-center gap-2">
-
-            <button
-              disabled={currentPage <= 1}
-              onClick={() =>
-                setCurrentPage((p) => Math.max(1, p - 1))
-              }
-              className="w-8 h-8 flex items-center justify-center border rounded-lg hover:bg-gray-100 disabled:opacity-50"
-            >
-              <MdChevronLeft />
+            <button className="w-8 h-8 flex items-center justify-center rounded-lg border text-gray-400 hover:bg-gray-50 transition-colors disabled:opacity-50" disabled>
+              <MdChevronLeft size={20} />
             </button>
-
-            <span className="text-sm text-gray-600 px-2">
-              {currentPage} / {totalPages}
-            </span>
-
-            <button
-              disabled={currentPage >= totalPages}
-              onClick={() =>
-                setCurrentPage((p) =>
-                  Math.min(totalPages, p + 1)
-                )
-              }
-              className="w-8 h-8 flex items-center justify-center border rounded-lg hover:bg-gray-100 disabled:opacity-50"
-            >
-              <MdChevronRight />
+            <button className="w-8 h-8 flex items-center justify-center rounded-lg border text-gray-400 hover:bg-gray-50 transition-colors disabled:opacity-50" disabled>
+              <MdChevronRight size={20} />
             </button>
-
           </div>
         </div>
       </div>
 
-      {/* Footer */}
-      <div className="text-center text-xs text-gray-400 mt-6">
-        © 2026 Nicky Frozen. All rights reserved.
-      </div>
-
-      {/* Modal Tambah/Edit */}
       <TambahKategoriModal
-        isOpen={isTambahOpen}
-        onClose={() => {
-          setIsTambahOpen(false);
-          setEditData(null);
-        }}
-        onSuccess={handleSuccessTambah}
-        editData={editData}
+        isOpen={isAddEditModalOpen}
+        onClose={() => setIsAddEditModalOpen(false)}
+        onSuccess={handleAddEditSuccess}
+        editData={editCategoryData}
       />
 
-      {/* Success Modal */}
-      <SuccessModal
-        isOpen={isSuccessOpen}
-        onClose={() => setIsSuccessOpen(false)}
-        title={successMessage}
-        description=""
-        buttonText="Selesai"
-      />
-
-      {/* Delete Modal */}
       <WarningModal
-        isOpen={isDeleteWarningOpen}
-        onClose={() => {
-          setIsDeleteWarningOpen(false);
-          setDeleteTarget(null);
-        }}
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={confirmDelete}
         title="Hapus Kategori?"
-        description={`Apakah Anda yakin ingin menghapus kategori "${deleteTarget?.name}"? Kategori akan dihapus dari semua produk yang menggunakannya.`}
-        buttonText="Ya, Hapus"
-        onConfirm={handleConfirmDelete}
+        description={`Apakah Anda yakin ingin menghapus kategori "${deleteCategoryName}"?`}
+        buttonText="Hapus"
+      />
+
+      <SuccessModal
+        isOpen={isSuccessModalOpen}
+        onClose={() => setIsSuccessModalOpen(false)}
+        title={successMessage.includes('dihapus') ? 'Kategori Dihapus' : (editCategoryData ? 'Kategori Diperbarui' : 'Kategori Berhasil Ditambahkan')}
+        description={successMessage}
       />
     </div>
   );

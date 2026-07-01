@@ -36,7 +36,7 @@ export default function SuccessModal({
         <button
           onClick={onClose}
           id="btn-success-selesai"
-          className="w-full rounded-xl bg-slate-900 py-3 font-semibold text-white transition hover:bg-slate-800"
+          className="w-full rounded-xl bg-[#082B7A] py-3 font-semibold text-white transition hover:bg-[#0B3B91]"
         >
           {buttonText}
         </button>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   MdArrowBack,
@@ -7,20 +7,32 @@ import {
   MdAdd,
 } from 'react-icons/md';
 
-import { useApp } from '../../context/AppContext';
+import { fetchProduks } from '../../services/adminApi';
 import SuccessModal from '../../components/admin/SuccessModal.jsx';
 
 export default function PengajuanStok() {
   const navigate = useNavigate();
-  const { products } = useApp();
 
-  const [isSuccessModalOpen, setIsSuccessModalOpen] =
-    useState(false);
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const [jumlah, setJumlah] = useState(50);
-  const [hargaPokok] = useState(50000);
-  const [selectedProductName, setSelectedProductName] =
-    useState('');
+  const [selectedProductId, setSelectedProductId] = useState('');
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const data = await fetchProduks();
+        setProducts(data);
+      } catch (error) {
+        console.error("Gagal memuat produk:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, []);
 
   const handleKurang = () => {
     if (jumlah > 1) {
@@ -34,7 +46,6 @@ export default function PengajuanStok() {
 
   const handleChangeJumlah = (e) => {
     const value = parseInt(e.target.value);
-
     if (!isNaN(value) && value > 0) {
       setJumlah(value);
     } else if (e.target.value === '') {
@@ -46,8 +57,15 @@ export default function PengajuanStok() {
     return new Intl.NumberFormat('id-ID').format(number);
   };
 
+  const selectedProduct = products.find(p => p.id === Number(selectedProductId));
+  const hargaPokok = selectedProduct ? selectedProduct.harga_beli : 0;
+
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!selectedProductId) return;
+
+    // Untuk saat ini hanya memunculkan modal success karena backend pengajuan belum diimplementasi sepenuhnya
+    // di request ini, fokus ke CRUD produk.
     setIsSuccessModalOpen(true);
   };
 
@@ -79,8 +97,7 @@ export default function PengajuanStok() {
           </h1>
 
           <p className="text-gray-500">
-            Silakan lengkapi formulir di bawah ini untuk
-            mengajukan restock barang.
+            Silakan lengkapi formulir di bawah ini untuk mengajukan restock barang.
           </p>
         </div>
 
@@ -94,27 +111,23 @@ export default function PengajuanStok() {
               <span className="text-red-500 ml-1">*</span>
             </label>
 
-            <select
-              required
-              value={selectedProductName}
-              onChange={(e) =>
-                setSelectedProductName(e.target.value)
-              }
-              className="w-full h-12 px-4 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-200"
-            >
-              <option value="">
-                Pilih produk...
-              </option>
-
-              {products.map((p) => (
-                <option
-                  key={p.id}
-                  value={p.name}
-                >
-                  {p.name}
-                </option>
-              ))}
-            </select>
+            {loading ? (
+              <div className="w-full h-12 px-4 border border-gray-300 rounded-xl flex items-center bg-gray-50 text-gray-500">Memuat produk...</div>
+            ) : (
+              <select
+                required
+                value={selectedProductId}
+                onChange={(e) => setSelectedProductId(e.target.value)}
+                className="w-full h-12 px-4 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-200 bg-gray-50"
+              >
+                <option value="">Pilih produk...</option>
+                {products.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.nama_produk} (Sisa: {p.stok_total})
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           {/* Cabang */}
@@ -127,7 +140,7 @@ export default function PengajuanStok() {
             <select
               required
               defaultValue="Cabang Sudirman"
-              className="w-full h-12 px-4 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-200"
+              className="w-full h-12 px-4 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-200 bg-gray-50"
             >
               <option>Cabang Sudirman</option>
               <option>Cabang Utama</option>
@@ -146,7 +159,7 @@ export default function PengajuanStok() {
               <button
                 type="button"
                 onClick={handleKurang}
-                className="w-12 bg-gray-50 hover:bg-gray-100 flex items-center justify-center"
+                className="w-12 bg-gray-50 hover:bg-gray-100 flex items-center justify-center border-r border-gray-300"
               >
                 <MdRemove size={20} />
               </button>
@@ -162,7 +175,7 @@ export default function PengajuanStok() {
               <button
                 type="button"
                 onClick={handleTambah}
-                className="w-12 bg-gray-50 hover:bg-gray-100 flex items-center justify-center"
+                className="w-12 bg-gray-50 hover:bg-gray-100 flex items-center justify-center border-l border-gray-300"
               >
                 <MdAdd size={20} />
               </button>
@@ -175,23 +188,17 @@ export default function PengajuanStok() {
               Estimasi Biaya
             </label>
 
-            <div className="flex items-center border border-gray-300 rounded-xl px-4 h-12">
-              <span className="text-gray-500 mr-2">
-                Rp
-              </span>
-
+            <div className="flex items-center border border-gray-300 bg-gray-50 rounded-xl px-4 h-12">
+              <span className="text-gray-500 mr-2">Rp</span>
               <input
                 readOnly
-                value={formatRupiah(
-                  jumlah * hargaPokok
-                )}
+                value={formatRupiah(jumlah * hargaPokok)}
                 className="flex-1 font-bold text-lg outline-none bg-transparent"
               />
             </div>
 
             <p className="text-xs text-gray-500 mt-2">
-              * Berdasarkan harga pokok Rp{' '}
-              {formatRupiah(hargaPokok)}/bks
+              * Berdasarkan harga beli Rp {formatRupiah(hargaPokok)}/pcs
             </p>
           </div>
 
@@ -211,31 +218,30 @@ export default function PengajuanStok() {
 
         {/* Actions */}
         <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-gray-200">
-
           <button
             type="button"
-            onClick={() =>
-              navigate('/admin/stok-barang')
-            }
-            className="px-6 py-3 border border-gray-300 rounded-xl font-medium hover:bg-gray-50"
+            onClick={() => navigate('/admin/stok-barang')}
+            className="px-6 py-3 border border-gray-300 rounded-xl font-medium hover:bg-gray-50 text-gray-700"
           >
             Batal
           </button>
 
           <button
             type="submit"
-            className="px-6 py-3 bg-[#082B7A] hover:bg-[#0B3B91] text-white rounded-xl font-medium flex items-center gap-2"
+            disabled={!selectedProductId}
+            className="px-6 py-3 bg-[#082B7A] hover:bg-[#0B3B91] text-white rounded-xl font-medium flex items-center gap-2 disabled:opacity-50"
           >
             <MdSend size={20} />
             Kirim Pengajuan
           </button>
-
         </div>
       </form>
 
       <SuccessModal
         isOpen={isSuccessModalOpen}
         onClose={handleCloseModal}
+        title="Pengajuan Terkirim!"
+        description="Pengajuan restock Anda berhasil dikirim ke Owner."
       />
     </div>
   );

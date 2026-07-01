@@ -49,7 +49,7 @@ export default function WarningModal({
           <button
             id="btn-warning-cancel"
             onClick={onClose}
-            className="flex-1 rounded-xl border border-slate-300 bg-white px-4 py-3 font-medium text-slate-700 transition hover:bg-slate-50"
+            className="flex-1 rounded-xl bg-[#E6EDFF] px-4 py-3 font-bold text-[#082B7A] transition-colors hover:bg-[#D5E0FF]"
           >
             Batal
           </button>

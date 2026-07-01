@@ -29,11 +29,13 @@ class TransaksiController extends Controller
         $subtotal = 0;
 
         foreach ($request->items as $item) {
-
             $produk = Produk::findOrFail($item['produk_id']);
-
             $subtotal += $produk->harga_jual * $item['qty'];
         }
+
+        $tax = round($subtotal * 0.11);
+        $rawTotal = $subtotal + $tax;
+        $totalTagihan = ceil($rawTotal / 1000) * 1000;
 
         $transaksi = Transaksi::create([
             'no_transaksi' => 'TRX-' . time(),
@@ -42,10 +44,10 @@ class TransaksiController extends Controller
             'nama_pelanggan' => null,
             'subtotal' => $subtotal,
             'diskon' => 0,
-            'total_tagihan' => $subtotal,
+            'total_tagihan' => $totalTagihan,
             'metode_pembayaran' => $request->metode_pembayaran,
             'uang_diterima' => $request->uang_diterima,
-            'kembalian' => $request->uang_diterima - $subtotal,
+            'kembalian' => $request->uang_diterima - $totalTagihan,
             'status' => 'berhasil',
         ]);
 

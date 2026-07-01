@@ -1,87 +1,50 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
-import { MdQrCodeScanner, MdSearch, MdClose } from 'react-icons/md';
-import { useApp } from '../../context/AppContext';
+import { useState, useEffect, useRef } from 'react';
+import { MdQrCodeScanner, MdClose } from 'react-icons/md';
+import { createProduk, updateProduk } from '../../services/adminApi';
 
 export default function TambahProdukModal({
   isOpen,
   onClose,
   onSuccess,
   editData = null,
+  kategoris = [],
 }) {
-  const { categories, addProduct, updateProduct } = useApp();
-
   const [formData, setFormData] = useState({
-    name: '',
+    nama_produk: '',
     sku: '',
-    expiryDate: '',
-    stock: '',
-    price: '',
-    categoryIds: [],
+    harga_beli: '',
+    harga_jual: '',
+    stok_total: '0',
+    kategori: '',
   });
 
   const [error, setError] = useState('');
-  const [categorySearchQuery, setCategorySearchQuery] = useState('');
-  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
-
-  const categoryDropdownRef = useRef(null);
+  const [loading, setLoading] = useState(false);
 
   const isEditMode = !!editData;
 
   useEffect(() => {
     if (editData) {
       setFormData({
-        name: editData.name || '',
+        nama_produk: editData.nama_produk || '',
         sku: editData.sku || '',
-        expiryDate: editData.expiryDate || '',
-        stock: String(editData.stock || ''),
-        price: String(editData.price || ''),
-        categoryIds: editData.categoryIds || [],
+        harga_beli: String(editData.harga_beli || ''),
+        harga_jual: String(editData.harga_jual || ''),
+        stok_total: String(editData.stok_total || '0'),
+        kategori: editData.kategori || '',
       });
     } else {
       setFormData({
-        name: '',
+        nama_produk: '',
         sku: '',
-        expiryDate: '',
-        stock: '',
-        price: '',
-        categoryIds: [],
+        harga_beli: '',
+        harga_jual: '',
+        stok_total: '0',
+        kategori: '',
       });
     }
-
     setError('');
-    setCategorySearchQuery('');
-    setIsCategoryDropdownOpen(false);
   }, [editData, isOpen]);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (
-        categoryDropdownRef.current &&
-        !categoryDropdownRef.current.contains(event.target)
-      ) {
-        setIsCategoryDropdownOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-
-    return () => {
-      document.removeEventListener(
-        'mousedown',
-        handleClickOutside
-      );
-    };
-  }, []);
-
-  const filteredCategories = useMemo(() => {
-    if (!categorySearchQuery.trim()) return categories;
-
-    return categories.filter((cat) =>
-      cat.name
-        .toLowerCase()
-        .includes(categorySearchQuery.toLowerCase())
-    );
-  }, [categories, categorySearchQuery]);
 
   if (!isOpen) return null;
 
@@ -90,55 +53,40 @@ export default function TambahProdukModal({
       ...prev,
       [field]: value,
     }));
-
     setError('');
   };
 
-  const handleCategoryToggle = (catId) => {
-    setFormData((prev) => ({
-      ...prev,
-      categoryIds: prev.categoryIds.includes(catId)
-        ? prev.categoryIds.filter((id) => id !== catId)
-        : [...prev.categoryIds, catId],
-    }));
-  };
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.name.trim())
-      return setError('Nama produk wajib diisi.');
+    if (!formData.nama_produk.trim()) return setError('Nama produk wajib diisi.');
+    if (!formData.sku.trim()) return setError('SKU wajib diisi.');
+    if (!formData.harga_beli) return setError('Harga beli wajib diisi.');
+    if (!formData.harga_jual) return setError('Harga jual wajib diisi.');
+    if (!formData.kategori.trim()) return setError('Kategori wajib diisi.');
 
-    if (!formData.sku.trim())
-      return setError('SKU wajib diisi.');
+    setLoading(true);
+    try {
+      const payload = {
+        nama_produk: formData.nama_produk,
+        sku: formData.sku,
+        harga_beli: Number(formData.harga_beli),
+        harga_jual: Number(formData.harga_jual),
+        stok_total: Number(formData.stok_total),
+        kategori: formData.kategori,
+      };
 
-    if (!formData.price)
-      return setError('Harga wajib diisi.');
-
-    if (!formData.stock)
-      return setError('Stok wajib diisi.');
-
-    if (formData.categoryIds.length === 0)
-      return setError(
-        'Pilih minimal satu kategori.'
-      );
-
-    const payload = {
-      name: formData.name,
-      sku: formData.sku,
-      expiryDate: formData.expiryDate,
-      stock: Number(formData.stock),
-      price: Number(formData.price),
-      categoryIds: formData.categoryIds,
-    };
-
-    if (isEditMode) {
-      updateProduct(editData.id, payload);
-    } else {
-      addProduct(payload);
+      if (isEditMode) {
+        await updateProduk(editData.id, payload);
+      } else {
+        await createProduk(payload);
+      }
+      onSuccess();
+    } catch (err) {
+      setError(err.message || 'Terjadi kesalahan saat menyimpan produk.');
+    } finally {
+      setLoading(false);
     }
-
-    onSuccess();
   };
 
   return (
@@ -153,212 +101,99 @@ export default function TambahProdukModal({
         {/* HEADER */}
         <div className="flex items-center justify-between border-b px-6 py-4">
           <h2 className="text-xl font-bold text-slate-800">
-            {isEditMode
-              ? 'Edit Produk'
-              : 'Tambah Produk Baru'}
+            {isEditMode ? 'Edit Produk' : 'Tambah Produk Baru'}
           </h2>
-
-          <button
-            onClick={onClose}
-            className="rounded-lg p-2 hover:bg-slate-100"
-          >
+          <button onClick={onClose} className="rounded-lg p-2 hover:bg-slate-100">
             <MdClose size={22} />
           </button>
         </div>
 
         {/* CONTENT */}
         <div className="flex-1 overflow-y-auto p-6">
-          <form
-            onSubmit={handleSubmit}
-            className="space-y-4"
-          >
+          <form onSubmit={handleSubmit} className="space-y-4">
             {!isEditMode && (
               <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
-                <MdQrCodeScanner
-                  size={48}
-                  className="mx-auto mb-3 text-slate-500"
-                />
-
+                <MdQrCodeScanner size={48} className="mx-auto mb-3 text-slate-500" />
                 <p className="text-sm text-slate-600">
-                  Gunakan scanner barcode
-                  untuk mengisi SKU otomatis
+                  Gunakan scanner barcode untuk mengisi SKU otomatis
                 </p>
               </div>
             )}
 
             <div>
-              <label className="mb-2 block text-sm font-semibold">
-                Nama Produk
-              </label>
-
+              <label className="mb-2 block text-sm font-semibold">Nama Produk</label>
               <input
                 type="text"
-                value={formData.name}
-                onChange={(e) =>
-                  handleChange(
-                    'name',
-                    e.target.value
-                  )
-                }
+                value={formData.nama_produk}
+                onChange={(e) => handleChange('nama_produk', e.target.value)}
                 className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-slate-900"
               />
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-semibold">
-                SKU / Barcode
-              </label>
-
+              <label className="mb-2 block text-sm font-semibold">SKU / Barcode</label>
               <input
                 type="text"
                 value={formData.sku}
-                onChange={(e) =>
-                  handleChange(
-                    'sku',
-                    e.target.value
-                  )
-                }
+                onChange={(e) => handleChange('sku', e.target.value)}
                 className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-slate-900"
               />
             </div>
 
-            <div ref={categoryDropdownRef}>
-              <label className="mb-2 block text-sm font-semibold">
-                Kategori Produk
-              </label>
-
-              <div className="relative">
-                <MdSearch
-                  size={20}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                />
-
-                <input
-                  type="text"
-                  placeholder="Cari kategori..."
-                  value={categorySearchQuery}
-                  onFocus={() =>
-                    setIsCategoryDropdownOpen(
-                      true
-                    )
-                  }
-                  onChange={(e) =>
-                    setCategorySearchQuery(
-                      e.target.value
-                    )
-                  }
-                  className="w-full rounded-xl border border-slate-300 py-3 pl-10 pr-4 outline-none focus:border-slate-900"
-                />
-              </div>
-
-              {isCategoryDropdownOpen && (
-                <div className="mt-2 max-h-52 overflow-y-auto rounded-xl border bg-white shadow-lg">
-                  {filteredCategories.map((cat) => (
-                    <label
-                      key={cat.id}
-                      className="flex cursor-pointer items-center gap-3 px-4 py-3 hover:bg-slate-50"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={formData.categoryIds.includes(
-                          cat.id
-                        )}
-                        onChange={() =>
-                          handleCategoryToggle(
-                            cat.id
-                          )
-                        }
-                      />
-
-                      <span>{cat.name}</span>
-                    </label>
-                  ))}
-                </div>
-              )}
-
-              {formData.categoryIds.length >
-                0 && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {formData.categoryIds.map(
-                    (id) => {
-                      const cat =
-                        categories.find(
-                          (c) => c.id === id
-                        );
-
-                      if (!cat) return null;
-
-                      return (
-                        <span
-                          key={id}
-                          className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold"
-                        >
-                          {cat.name}
-                        </span>
-                      );
-                    }
-                  )}
-                </div>
-              )}
-            </div>
-
             <div>
-              <label className="mb-2 block text-sm font-semibold">
-                Tanggal Kadaluwarsa
-              </label>
-
+              <label className="mb-2 block text-sm font-semibold">Kategori Produk</label>
               <input
-                type="date"
-                value={formData.expiryDate}
-                onChange={(e) =>
-                  handleChange(
-                    'expiryDate',
-                    e.target.value
-                  )
-                }
+                type="text"
+                list="kategoris-list"
+                value={formData.kategori}
+                onChange={(e) => handleChange('kategori', e.target.value)}
                 className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-slate-900"
+                placeholder="Ketik atau pilih kategori..."
               />
+              <datalist id="kategoris-list">
+                {kategoris.map((kat, idx) => (
+                  <option key={idx} value={kat.name} />
+                ))}
+              </datalist>
             </div>
 
-            <div>
-              <label className="mb-2 block text-sm font-semibold">
-                Stok
-              </label>
-
-              <input
-                type="number"
-                value={formData.stock}
-                onChange={(e) =>
-                  handleChange(
-                    'stock',
-                    e.target.value
-                  )
-                }
-                className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-slate-900"
-              />
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-semibold">
-                Harga Produk
-              </label>
-
-              <div className="flex overflow-hidden rounded-xl border border-slate-300">
-                <span className="bg-slate-100 px-4 py-3 font-semibold">
-                  Rp
-                </span>
-
+            {!isEditMode && (
+              <div>
+                <label className="mb-2 block text-sm font-semibold">Stok Awal (Opsional)</label>
                 <input
                   type="number"
-                  value={formData.price}
-                  onChange={(e) =>
-                    handleChange(
-                      'price',
-                      e.target.value
-                    )
-                  }
-                  className="flex-1 px-4 py-3 outline-none"
+                  value={formData.stok_total}
+                  onChange={(e) => handleChange('stok_total', e.target.value)}
+                  className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-slate-900"
                 />
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="mb-2 block text-sm font-semibold">Harga Beli</label>
+                <div className="flex overflow-hidden rounded-xl border border-slate-300">
+                  <span className="bg-slate-100 px-4 py-3 font-semibold">Rp</span>
+                  <input
+                    type="number"
+                    value={formData.harga_beli}
+                    onChange={(e) => handleChange('harga_beli', e.target.value)}
+                    className="flex-1 px-4 py-3 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-semibold">Harga Jual</label>
+                <div className="flex overflow-hidden rounded-xl border border-slate-300">
+                  <span className="bg-slate-100 px-4 py-3 font-semibold">Rp</span>
+                  <input
+                    type="number"
+                    value={formData.harga_jual}
+                    onChange={(e) => handleChange('harga_jual', e.target.value)}
+                    className="flex-1 px-4 py-3 outline-none"
+                  />
+                </div>
               </div>
             </div>
 
@@ -374,18 +209,17 @@ export default function TambahProdukModal({
         <div className="flex justify-end gap-3 border-t px-6 py-4">
           <button
             onClick={onClose}
-            className="rounded-xl border border-slate-300 px-5 py-3 font-medium hover:bg-slate-50"
+            disabled={loading}
+            className="rounded-xl border border-slate-300 px-5 py-3 font-medium hover:bg-slate-50 disabled:opacity-50"
           >
             Batal
           </button>
-
           <button
             onClick={handleSubmit}
-            className="rounded-xl bg-slate-900 px-5 py-3 font-medium text-white hover:bg-slate-800"
+            disabled={loading}
+            className="rounded-xl bg-slate-900 px-5 py-3 font-medium text-white hover:bg-slate-800 disabled:opacity-50"
           >
-            {isEditMode
-              ? 'Simpan Perubahan'
-              : 'Simpan Produk'}
+            {loading ? 'Menyimpan...' : (isEditMode ? 'Simpan Perubahan' : 'Simpan Produk')}
           </button>
         </div>
       </div>

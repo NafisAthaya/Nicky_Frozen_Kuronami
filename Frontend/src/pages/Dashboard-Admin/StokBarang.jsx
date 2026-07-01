@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   MdFilterList,
@@ -7,7 +7,7 @@ import {
   MdDelete,
 } from 'react-icons/md';
 
-import { useApp } from '../../context/AppContext';
+import { fetchProduks, deleteProduk, fetchKategoris } from '../../services/adminApi';
 import FilterModal from '../../components/admin/FilterModal';
 import TambahProdukModal from '../../components/admin/TambahProdukModal';
 import SuccessModal from '../../components/admin/SuccessModal.jsx';
@@ -55,11 +55,9 @@ function getProductEmoji(categoryNames = '') {
 export default function StokBarang() {
   const navigate = useNavigate();
 
-  const {
-    products,
-    deleteProduct,
-    getCategoryNames,
-  } = useApp();
+  const [products, setProducts] = useState([]);
+  const [kategoris, setKategoris] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isTambahOpen, setIsTambahOpen] = useState(false);
@@ -73,25 +71,42 @@ export default function StokBarang() {
 
   const [activeFilter, setActiveFilter] = useState({
     pilihSemua: false,
-    selectedCategoryIds: [],
+    selectedCategoryNames: [],
   });
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const prods = await fetchProduks();
+      setProducts(prods);
+      const kats = await fetchKategoris();
+      setKategoris(kats);
+    } catch (error) {
+      console.error('Gagal memuat produk', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   const filteredProducts = useMemo(() => {
     if (
       activeFilter.pilihSemua ||
-      activeFilter.selectedCategoryIds.length === 0
+      activeFilter.selectedCategoryNames.length === 0
     ) {
       return products;
     }
 
     return products.filter((p) =>
-      (p.categoryIds || []).some((catId) =>
-        activeFilter.selectedCategoryIds.includes(catId)
-      )
+      activeFilter.selectedCategoryNames.includes(p.kategori)
     );
   }, [products, activeFilter]);
 
   const handleApplyFilter = (filters) => {
+    // Note: FilterModal needs to return selectedCategoryNames instead of IDs
     setActiveFilter(filters);
   };
 
@@ -116,6 +131,7 @@ export default function StokBarang() {
 
     setIsSuccessOpen(true);
     setEditData(null);
+    loadData(); // Reload data after success
   };
 
   const handleOpenDelete = (product) => {
@@ -123,16 +139,20 @@ export default function StokBarang() {
     setIsDeleteWarningOpen(true);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (deleteTarget) {
-      deleteProduct(deleteTarget.id);
+      try {
+        await deleteProduk(deleteTarget.id);
+        setSuccessMessage('Produk Berhasil Dihapus!');
+        setIsSuccessOpen(true);
+        loadData();
+      } catch (error) {
+        console.error('Gagal menghapus', error);
+      }
     }
 
     setDeleteTarget(null);
     setIsDeleteWarningOpen(false);
-
-    setSuccessMessage('Produk Berhasil Dihapus!');
-    setIsSuccessOpen(true);
   };
 
   return (
@@ -162,7 +182,7 @@ export default function StokBarang() {
 
             Filter
 
-            {activeFilter.selectedCategoryIds.length > 0 &&
+            {activeFilter.selectedCategoryNames.length > 0 &&
               !activeFilter.pilihSemua && (
                 <span className="
                   w-5 h-5
@@ -173,7 +193,7 @@ export default function StokBarang() {
                   font-bold
                   flex items-center justify-center
                 ">
-                  {activeFilter.selectedCategoryIds.length}
+                  {activeFilter.selectedCategoryNames.length}
                 </span>
               )}
           </button>
@@ -194,7 +214,7 @@ export default function StokBarang() {
           </button>
 
           <button
-            onClick={() => navigate('/pengajuan-stok')}
+            onClick={() => navigate('/admin/pengajuan-stok')}
             className="
               px-4 py-2
               bg-[#082B7A]
@@ -258,8 +278,11 @@ export default function StokBarang() {
           </thead>
 
           <tbody>
-
-            {filteredProducts.length === 0 ? (
+            {loading ? (
+              <tr>
+                <td colSpan={6} className="text-center py-20 text-gray-500">Memuat data produk...</td>
+              </tr>
+            ) : filteredProducts.length === 0 ? (
 
               <tr>
 
@@ -284,11 +307,10 @@ export default function StokBarang() {
             ) : (
 
               filteredProducts.map((product) => {
-                const categoryNames =
-                  getCategoryNames(product.categoryIds);
+                const categoryNames = product.kategori || '-';
 
                 const status =
-                  getStockStatus(product.stock);
+                  getStockStatus(product.stok_total);
 
                 const emoji =
                   getProductEmoji(categoryNames);
@@ -319,11 +341,11 @@ export default function StokBarang() {
                         <div>
 
                           <p className="font-semibold text-[#082B7A]">
-                            {product.name}
+                            {product.nama_produk}
                           </p>
 
                           <p className="text-xs text-gray-500">
-                            {categoryNames || '-'}
+                            {categoryNames}
                           </p>
 
                         </div>
@@ -337,11 +359,11 @@ export default function StokBarang() {
                     </td>
 
                     <td className="px-5 py-4 text-sm text-gray-600">
-                      {categoryNames || '-'}
+                      {categoryNames}
                     </td>
 
                     <td className="px-5 py-4 font-semibold">
-                      Rp {formatRupiah(product.price)}
+                      Rp {formatRupiah(product.harga_jual)}
                     </td>
 
                     <td className="px-5 py-4">
@@ -349,7 +371,7 @@ export default function StokBarang() {
                       <div className="flex flex-col gap-1">
 
                         <span className="font-bold">
-                          {product.stock} Pcs
+                          {product.stok_total} Pcs
                         </span>
 
                         <span className={`
@@ -435,6 +457,7 @@ export default function StokBarang() {
         isOpen={isFilterOpen}
         onClose={() => setIsFilterOpen(false)}
         onApply={handleApplyFilter}
+        kategoris={kategoris}
       />
 
       <TambahProdukModal
@@ -445,6 +468,7 @@ export default function StokBarang() {
         }}
         onSuccess={handleSuccessTambah}
         editData={editData}
+        kategoris={kategoris}
       />
 
       <SuccessModal
@@ -462,7 +486,7 @@ export default function StokBarang() {
           setDeleteTarget(null);
         }}
         title="Hapus Produk?"
-        description={`Apakah Anda yakin ingin menghapus produk "${deleteTarget?.name}"? Data stok dan riwayat masuk terkait juga akan dihapus.`}
+        description={`Apakah Anda yakin ingin menghapus produk "${deleteTarget?.nama_produk}"? Data stok dan riwayat masuk terkait juga akan dihapus.`}
         buttonText="Ya, Hapus"
         onConfirm={handleConfirmDelete}
       />

@@ -18,4 +18,14 @@ class Produk extends Model
         'gambar',
         'cabang_id'
     ];
+
+    public function batches()
+    {
+        return $this->hasMany(ProdukBatch::class);
+    }
+
+    public function cabang()
+    {
+        return $this->belongsTo(Cabang::class);
+    }
 }

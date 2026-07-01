@@ -75,19 +75,16 @@ export default function OrderPanel({
   return (
     <aside
         id="order-panel"
-        cclassName="
+        className="
       w-[360px]
-      h-screen
+      h-full
       bg-white
       border-l
       border-gray-200
       shadow-lg
       flex
       flex-col
-      fixed
-      right-0
-      top-0
-      z-[90]
+      shrink-0
       "
 >
       {/* Header */}

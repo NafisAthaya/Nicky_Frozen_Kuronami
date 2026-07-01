@@ -7,6 +7,18 @@ export default function TopBar() {
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
+  // Ambil data user yang login dari localStorage
+  const user = (() => {
+    try {
+      return JSON.parse(localStorage.getItem('user'));
+    } catch {
+      return null;
+    }
+  })();
+
+  const userName = user?.name || 'Admin';
+  const userRole = user?.role || 'admin';
+
   useEffect(() => {
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -23,7 +35,7 @@ export default function TopBar() {
 
   const handleViewAll = () => {
     setShowNotifications(false);
-    navigate('/dashboard/notifikasi');
+    navigate('/admin/notifikasi');
   };
 
   return (
@@ -141,10 +153,10 @@ export default function TopBar() {
         <div className="flex items-center gap-3">
           <div className="text-right">
             <p className="text-sm font-bold text-[#0B3B91]">
-            Nicky Owner
+            {userName}
           </p>
-          <p className="text-xs text-slate-500">
-            Owner
+          <p className="text-xs text-slate-500 capitalize">
+            {userRole}
           </p>
           </div>
           <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-md">

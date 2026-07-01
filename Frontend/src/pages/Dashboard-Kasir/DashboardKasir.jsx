@@ -5,7 +5,7 @@ import CategoryTabs from './CategoryTabs';
 import ProductGrid from './ProductGrid';
 import OrderPanel from './OrderPanel';
 
-import { useCart } from '../../hooks/useCart';
+import { useCart } from '../../hooks/UseCart';
 import StatusPembayaran from './StatusPembayaran';
 
 

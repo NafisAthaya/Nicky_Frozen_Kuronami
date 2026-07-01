@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import ownerProfile from '../../assets/OwnerProfile.png';
+import { MdOutlineLogout } from 'react-icons/md';
 
 const menuItems = [
   {
@@ -67,7 +69,7 @@ const menuItems = [
 const menuItemsBottom = [
   {
     id: 'pajak',
-    label: '% Pajak & Pembulatan',
+    label: 'Pajak & Pembulatan',
     path: '/owner/pajak-pembulatan',
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -103,6 +105,7 @@ const profileItem = {
 export default function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const userRole = localStorage.getItem('userRole') || 'owner';
   const userName = localStorage.getItem('userName') || 'Nicky Owner';
@@ -173,75 +176,106 @@ export default function Sidebar() {
   };
 
   return (
-   <aside className="fixed left-0 top-0 h-screen w-[280px] bg-[#082B7A] flex flex-col z-50">
-      {/* Brand */}
-      <div className="px-6 pt-6 pb-2">
-        <h1 className="text-xl font-bold text-white tracking-tight">Nicky Frozen</h1>
-      </div>
-
-      {/* User Profile */}
-      <div className="px-6 py-4 flex items-center gap-3 border-b border-[#5A7AC9]">
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-sm overflow-hidden">
-          <img
-            src={ownerProfile}
-            alt="Avatar"
-            className="w-full h-full object-cover"
-          />
+    <>
+      <aside className="fixed left-0 top-0 h-screen w-[280px] bg-[#082B7A] flex flex-col z-50">
+        {/* Brand */}
+        <div className="px-6 pt-6 pb-2">
+          <h1 className="text-xl font-bold text-white tracking-tight">Nicky Frozen</h1>
         </div>
-        <div>
-          <p className="text-white text-sm font-semibold">Halo, {userName}</p>
-          <span className="text-[10px] text-blue-300 font-bold uppercase tracking-wider">{userRole}</span>
+
+        {/* User Profile */}
+        <div className="px-6 py-4 flex items-center gap-3 border-b border-[#5A7AC9]">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-sm overflow-hidden">
+            <img
+              src={ownerProfile}
+              alt="Avatar"
+              className="w-full h-full object-cover"
+            />
+          </div>
+          <div>
+            <p className="text-white text-sm font-semibold">Halo, {userName}</p>
+            <span className="text-[10px] text-blue-300 font-bold uppercase tracking-wider">{userRole}</span>
+          </div>
         </div>
-      </div>
 
-      {/* Main Menu */}
-      <nav className="flex-1 px-6 pt-5 space-y-2 overflow-y-auto">
+        {/* Main Menu */}
+        <nav className="flex-1 px-6 pt-5 space-y-2 overflow-y-auto">
 
-        {userRole === 'owner' && (
-          <>
-            {filteredMenuItems.map(renderMenuItem)}
-            <div className="my-5 border-t border-[#5A7AC9]" />
-            {filteredMenuItemsBottom.map(renderMenuItem)}
-          </>
-        )}
+          {userRole === 'owner' && (
+            <>
+              {filteredMenuItems.map(renderMenuItem)}
+              <div className="my-5 border-t border-[#5A7AC9]" />
+              {filteredMenuItemsBottom.map(renderMenuItem)}
+            </>
+          )}
 
-        {userRole !== 'owner' && filteredMenuItems.map(renderMenuItem)}
+          {userRole !== 'owner' && filteredMenuItems.map(renderMenuItem)}
 
-        {(userRole === 'admin') && (
-          <>
-            <div className="my-3 border-t border-[#5A7AC9]" />
-            {filteredMenuItemsBottom.map(renderMenuItem)}
-          </>
-        )}
+          {(userRole === 'admin') && (
+            <>
+              <div className="my-3 border-t border-[#5A7AC9]" />
+              {filteredMenuItemsBottom.map(renderMenuItem)}
+            </>
+          )}
 
-        <div className="my-3 border-t border-[#5A7AC9]" />
+          <div className="my-3 border-t border-[#5A7AC9]" />
 
-        {renderMenuItem(profileItem)}
-      </nav>
+          {renderMenuItem(profileItem)}
+        </nav>
 
-      {/* Bottom Actions */}
-      <div className="mt-auto px-6 pb-8 space-y-3">
-        {userRole === 'owner' && (
+        {/* Bottom Actions */}
+        <div className="mt-auto px-6 pb-8 space-y-3">
+          {userRole === 'owner' && (
+            <button
+              onClick={() => navigate('/owner/pusat-bantuan')}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-300 hover:bg-white/5 hover:text-white transition-all duration-200"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+              <span>Bantuan Sistem</span>
+            </button>
+          )}
           <button
-            onClick={() => navigate('/owner/pusat-bantuan')}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-300 hover:bg-white/5 hover:text-white transition-all duration-200"
+            onClick={() => setShowLogoutModal(true)}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-300 hover:bg-red-500/10 hover:text-red-200 transition-all duration-200"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
             </svg>
-            <span>Bantuan Sistem</span>
+            <span>Keluar</span>
           </button>
-        )}
-        <button
-          onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-300 hover:bg-red-500/10 hover:text-red-200 transition-all duration-200"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-          </svg>
-          <span>Keluar</span>
-        </button>
-      </div>
-    </aside>
+        </div>
+      </aside>
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl p-6 w-[360px] shadow-2xl flex flex-col items-center">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+              <MdOutlineLogout size={32} className="text-red-500 rotate-180" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Konfirmasi Keluar</h3>
+            <p className="text-gray-500 text-center mb-6">
+              Apakah Anda yakin ingin keluar?
+            </p>
+            <div className="flex w-full gap-3">
+              <button
+                onClick={() => setShowLogoutModal(false)}
+                className="flex-1 py-3 px-4 rounded-xl text-sm font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleLogout}
+                className="flex-1 py-3 px-4 rounded-xl text-sm font-bold text-white bg-red-500 hover:bg-red-600 transition-colors shadow-lg shadow-red-500/30"
+              >
+                Keluar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
