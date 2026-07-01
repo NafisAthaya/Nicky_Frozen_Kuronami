@@ -150,20 +150,21 @@ export default function Bantuan() {
         <div className="space-y-4 mb-10">        
             {faqs.map((faq, index) => (
                 <div
-        key={index}
-        className="bg-white rounded-2xl border border-gray-200 overflow-hidden cursor-pointer"
-        >
+                key={index}
+                onClick={() => toggleFaq(index)}
+                className="bg-white rounded-2xl border border-gray-200 overflow-hidden cursor-pointer"
+              >
             <div className="flex justify-between items-center p-5 font-semibold text-[#082B7A]">
               <span>{faq.title}</span>
               {openFaq === index ? <HiChevronUp className="text-xl text-gray-500" /> : <HiChevronDown className="text-xl text-gray-500" />}
             </div>
             {openFaq === index && (
               <div className="px-5 pb-5 text-gray-600">
-                <ul>
-                  {faq.content.map((item, i) => (
-                    <li key={i}>{item}</li>
-                  ))}
-                </ul>
+                <ul className="list-decimal pl-6 space-y-2 text-gray-600 text-sm leading-7">
+                {faq.content.map((item, i) => (
+                  <li key={i}>{item}</li>
+                ))}
+              </ul>
               </div>
             )}
           </div>
@@ -175,8 +176,15 @@ export default function Bantuan() {
           <h3>Butuh Bantuan Darurat?</h3>
           <p>Jika aplikasi error total atau mati lampu, segera hubungi Manajer Toko atau IT Support.</p>
         </div>
-        <button className="bg-green-500 hover:bg-green-600 px-5 py-3 rounded-xl font-medium flex items-center gap-2">
-          <HiOutlineChatAlt2 className="wa-icon" />
+        <button
+          onClick={() =>
+            window.open(
+            "https://wa.me/62882007588067?text=Halo%20Admin,%0A%0ASaya%20mengalami%20kendala%20pada%20aplikasi%20kasir%20Nicky%20Frozen.%0A%0ANama:%20%0ACabang:%20%0AKendala:%20%0A%0AMohon%20bantuannya.%20Terima%20kasih.",
+            "_blank"
+          )
+          }
+          className="bg-green-500 hover:bg-green-600 px-5 py-3 rounded-xl font-medium flex items-center gap-2"
+        >
           Hubungi Admin via WhatsApp
         </button>
       </div>
@@ -194,7 +202,15 @@ export default function Bantuan() {
           <p>Tim IT Support kami siap membantu Anda.</p>
         </div>
       </div>
-      <button className="bg-white text-[#082B7A] px-5 py-3 rounded-xl font-semibold flex items-center gap-2 hover:bg-gray-100 transition">
+      <button
+        onClick={() =>
+          window.open(
+          "https://wa.me/62882007588067?text=Halo%20Admin,%0A%0ASaya%20mengalami%20kendala%20pada%20aplikasi%20kasir%20Nicky%20Frozen.%0A%0ANama:%20%0ACabang:%20%0AKendala:%20%0A%0AMohon%20bantuannya.%20Terima%20kasih.",
+          "_blank"
+        )
+        }
+        className="bg-white text-[#082B7A] px-5 py-3 rounded-xl font-semibold flex items-center gap-2 hover:bg-gray-100 transition"
+      >
         <HiOutlineChatAlt2 className="wa-icon" />
         Hubungi IT Support
       </button>

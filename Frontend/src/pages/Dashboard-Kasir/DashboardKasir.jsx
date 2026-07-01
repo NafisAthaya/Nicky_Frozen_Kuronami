@@ -11,7 +11,7 @@ import StatusPembayaran from './StatusPembayaran';
 
 export default function DashboardKasir() {
   const cart = useCart();
-
+  console.log(cart);
   const [activeCategory, setActiveCategory] = useState('semua');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -62,6 +62,7 @@ export default function DashboardKasir() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
 
   const filteredProducts = useMemo(() => {
     let result = productsData;
@@ -153,6 +154,7 @@ export default function DashboardKasir() {
   }
 };
 
+
 const handleNewTransaction = () => {
   setShowSuccessPopup(false);
   setSuccessData(null);
@@ -177,17 +179,17 @@ const handleNewTransaction = () => {
         />
       </div>
 
-      <OrderPanel
-        items={cart.items}
-        subtotal={cart.subtotal}
-        tax={cart.tax}
-        donasi={cart.donasi}
-        total={cart.total}
-        itemCount={cart.itemCount}
-        onUpdateQuantity={cart.updateQuantity}
-        onRemoveItem={cart.removeItem}
-        onPaymentSuccess={handlePaymentSuccess}
-      />
+        <OrderPanel
+          items={cart.items}
+          subtotal={cart.subtotal}
+          tax={cart.tax}
+          donasi={cart.donasi}
+          total={cart.total}
+          itemCount={cart.itemCount}
+          onUpdateQuantity={cart.updateQuantity}
+          onRemoveItem={cart.removeItem}
+          onPaymentSuccess={handlePaymentSuccess}
+        />
 
       {showSuccessPopup && successData && (
       <StatusPembayaran

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import PopupTunai from './PopupTunai';
 import PopupDebit from './PopupDebit';
 import PopupQris from './PopupQris';
@@ -35,10 +36,13 @@ export default function OrderPanel({
   onRemoveItem,
   onPaymentSuccess,
 }) {
+  const navigate = useNavigate();
   const [activePayment, setActivePayment] = useState('tunai');
   const [showTunaiPopup, setShowTunaiPopup] = useState(false);
   const [showDebitPopup, setShowDebitPopup] = useState(false);
   const [showQrisPopup, setShowQrisPopup] = useState(false);
+  const [showHoldPopup, setShowHoldPopup] = useState(false);
+  const [customerName, setCustomerName] = useState('');
 
   const handlePayNow = () => {
     if (items.length === 0) return;
@@ -71,11 +75,63 @@ export default function OrderPanel({
       onPaymentSuccess('qris', {});
     }
   };
+  const handleSaveHoldOrder = async () => {
+
+  if (customerName.trim() === '') {
+    alert('Nama pelanggan wajib diisi.');
+    return;
+  }
+
+  try {
+
+    const response = await fetch(
+      'http://127.0.0.1:8000/api/hold-orders',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+
+          nama_pelanggan: customerName,
+
+          subtotal: subtotal,
+
+          items: items.map(item => ({
+            produk_id: item.id,
+            qty: item.quantity,
+            harga: item.price,
+          })),
+
+        }),
+      }
+    );
+
+    const result = await response.json();
+
+    if (!result.success) {
+      alert(result.message);
+      return;
+    }
+
+    setShowHoldPopup(false);
+setCustomerName('');
+
+navigate('/kasir/tersimpan');
+
+  } catch (error) {
+
+    console.error(error);
+    alert('Terjadi kesalahan.');
+
+  }
+
+};
 
   return (
     <aside
         id="order-panel"
-        cclassName="
+        className="
       w-[360px]
       h-screen
       bg-white
@@ -222,8 +278,17 @@ export default function OrderPanel({
         })}
       </div>
 
-      {/* Pay Button */}
-      <div className="p-5">
+      {/* Action Buttons */}
+      <div className="p-5 space-y-3">
+
+        <button
+          className="w-full h-11 border-2 border-[#082B7A] text-[#082B7A] rounded-xl font-semibold hover:bg-blue-50 disabled:opacity-50"
+          disabled={items.length === 0}
+          onClick={() => setShowHoldPopup(true)}
+        >
+          Simpan Pesanan
+        </button>
+
         <button
           className="w-full h-12 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 disabled:opacity-50"
           id="pay-button"
@@ -235,6 +300,7 @@ export default function OrderPanel({
             <HiArrowRight />
           </span>
         </button>
+
       </div>
 
       {showTunaiPopup && (
@@ -259,6 +325,52 @@ export default function OrderPanel({
           onClose={() => setShowQrisPopup(false)}
           onSubmit={handleQrisSubmit}
         />
+      )}
+
+      {showHoldPopup && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[999]">
+
+          <div className="bg-white rounded-xl w-[420px] p-6">
+
+            <h2 className="text-xl font-bold mb-5">
+              Simpan Pesanan
+            </h2>
+
+            <label className="block text-sm font-medium mb-2">
+              Nama Pelanggan
+            </label>
+
+            <input
+              type="text"
+              className="w-full border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Contoh: Budi"
+              value={customerName}
+              onChange={(e) => setCustomerName(e.target.value)}
+            />
+
+            <div className="flex justify-end gap-3 mt-6">
+
+              <button
+                className="px-5 py-2 rounded-lg border"
+                onClick={() => {
+                  setShowHoldPopup(false);
+                  setCustomerName('');
+                }}
+              >
+                Batal
+              </button>
+
+              <button
+                className="px-5 py-2 rounded-lg bg-[#082B7A] text-white"
+                onClick={handleSaveHoldOrder}>
+                Simpan
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
       )}
     </aside>
   );

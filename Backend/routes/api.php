@@ -9,6 +9,10 @@ use App\Http\Controllers\Api\TransaksiController;
 
 use App\Http\Controllers\Api\PengeluaranController;
 
+use App\Http\Controllers\Api\ProfileController;
+
+use App\Http\Controllers\Api\HoldOrderController;
+
 Route::get('/owner/dashboard/stats', [OwnerDashboardController::class, 'stats']);
 
 Route::post('/login', [AuthController::class, 'login']);
@@ -20,3 +24,13 @@ Route::get('/transaksi', [TransaksiController::class, 'index']);
 Route::post('/transaksi', [TransaksiController::class, 'store']);
 Route::get('/pengeluaran', [PengeluaranController::class, 'index']);
 Route::post('/pengeluaran', [PengeluaranController::class, 'store']);
+
+Route::post(
+    '/profile/photo',
+    [ProfileController::class, 'uploadPhoto']
+);
+
+Route::get('/hold-orders', [HoldOrderController::class, 'index']);
+Route::post('/hold-orders', [HoldOrderController::class, 'store']);
+Route::get('/hold-orders/{id}', [HoldOrderController::class, 'show']);
+Route::delete('/hold-orders/{id}', [HoldOrderController::class, 'destroy']);

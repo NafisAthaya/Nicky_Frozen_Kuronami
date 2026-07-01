@@ -1,5 +1,6 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import ownerProfile from '../../assets/OwnerProfile.png';
+import { useState } from 'react';
 
 const menuItems = [
   {
@@ -99,10 +100,10 @@ const profileItem = {
   ),
 };
 
-
 export default function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
+  const [showLogoutPopup, setShowLogoutPopup] = useState(false);
 
   const userRole = localStorage.getItem('userRole') || 'owner';
   const userName = localStorage.getItem('userName') || 'Nicky Owner';
@@ -233,7 +234,7 @@ export default function Sidebar() {
           </button>
         )}
         <button
-          onClick={handleLogout}
+          onClick={() => setShowLogoutPopup(true)}
           className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-300 hover:bg-red-500/10 hover:text-red-200 transition-all duration-200"
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -242,6 +243,38 @@ export default function Sidebar() {
           <span>Keluar</span>
         </button>
       </div>
+      {showLogoutPopup && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[9999]">
+          <div className="bg-white rounded-3xl p-8 w-[420px] shadow-2xl">
+
+            <h2 className="text-2xl font-bold text-[#082B7A] mb-3">
+              Keluar Sistem
+            </h2>
+
+            <p className="text-gray-600 mb-8">
+              Apakah Anda yakin ingin keluar dari dashboard kasir?
+            </p>
+
+            <div className="flex justify-end gap-3">
+
+              <button
+                onClick={() => setShowLogoutPopup(false)}
+                className="px-6 py-3 rounded-xl border border-gray-300 hover:bg-gray-100"
+              >
+                Batal
+              </button>
+
+              <button
+                onClick={handleLogout}
+                className="px-6 py-3 rounded-xl bg-red-500 text-white hover:bg-red-600"
+              >
+                Keluar
+              </button>
+
+            </div>
+          </div>
+        </div>
+      )}
     </aside>
   );
 }

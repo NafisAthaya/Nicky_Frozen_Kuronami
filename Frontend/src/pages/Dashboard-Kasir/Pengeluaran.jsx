@@ -1,28 +1,49 @@
 import { useState, useEffect } from 'react';
+
 import {
   HiOutlineCash,
-  HiOutlineShoppingCart,
-  HiOutlineTruck,
-  HiOutlineBeaker,
   HiOutlineCheckCircle,
 } from 'react-icons/hi';
 
-// Category icons mapping
-const categoryIcons = {
-  operasional: { icon: HiOutlineShoppingCart, color: '#3B82F6', bg: 'rgba(59, 130, 246, 0.1)' },
-  konsumsi: { icon: HiOutlineBeaker, color: '#8B5CF6', bg: 'rgba(139, 92, 246, 0.1)' },
-  transportasi: { icon: HiOutlineTruck, color: '#F59E0B', bg: 'rgba(245, 158, 11, 0.1)' },
-  lainnya: { icon: HiOutlineCash, color: '#10B981', bg: 'rgba(16, 185, 129, 0.1)' },
-};
+  function formatRupiah(num) {
+    if (num === 0) return 'Rp 0';
+    return 'Rp ' + num.toLocaleString('id-ID');
+  }
 
-function formatRupiah(num) {
-  if (num === 0) return 'Rp 0';
-  return 'Rp ' + num.toLocaleString('id-ID');
-}
+  function getTimeString() {
+    return new Date().toLocaleTimeString('id-ID', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
 
-function getTimeString() {
-  return new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-}
+  function getBadge(nama) {
+    return nama.charAt(0).toUpperCase();
+  }
+
+  function getBadgeColor(nama) {
+    const text = nama.toLowerCase();
+
+    if (text.includes("parkir"))
+      return "bg-blue-100 text-blue-700";
+
+    if (text.includes("perbaikan"))
+      return "bg-orange-100 text-orange-700";
+
+    if (text.includes("tisu"))
+      return "bg-green-100 text-green-700";
+
+    if (text.includes("listrik"))
+      return "bg-yellow-100 text-yellow-700";
+
+    if (text.includes("air"))
+      return "bg-cyan-100 text-cyan-700";
+
+    if (text.includes("internet"))
+      return "bg-purple-100 text-purple-700";
+
+    return "bg-gray-100 text-gray-700";
+  }
 
 export default function Pengeluaran() {
   const [namaBiaya, setNamaBiaya] = useState('');
@@ -236,18 +257,15 @@ try {
           ) : (
             <div className="flex-1 overflow-y-auto">
               {expenses.map((item) => {
-                const catData = categoryIcons[item.kategori] || categoryIcons.lainnya;
-                const CatIcon = catData.icon;
 
                 return (
                   <div
                     className="flex items-center gap-4 p-4 bg-white border border-gray-200 rounded-xl mb-3 hover:shadow-md transition" key={item.id} id={`riwayat-item-${item.id}`}>
-                    <div
-                      className="w-11 h-11 rounded-xl flex items-center justify-center text-xl shrink-0"
-                      style={{ background: catData.bg, color: catData.color }}
-                    >
-                      <CatIcon />
-                    </div>
+                      <div
+                        className={`w-11 h-11 rounded-xl flex items-center justify-center font-bold text-lg shrink-0 ${getBadgeColor(item.nama)}`}
+                      >
+                        {getBadge(item.nama)}
+                      </div>
 
                     <div className="flex-1 min-w-0 flex flex-col">
                       <span className="text-sm font-semibold text-gray-900 truncate">{item.nama}</span>

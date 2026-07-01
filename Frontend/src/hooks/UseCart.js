@@ -46,6 +46,10 @@ export function useCart() {
     setItems([]);
   }, []);
 
+  const loadCart = useCallback((cartItems) => {
+  setItems(cartItems);
+  }, []);
+
   const subtotal = useMemo(
     () => items.reduce((sum, item) => sum + item.price * item.quantity, 0),
     [items]
@@ -77,6 +81,7 @@ export function useCart() {
     removeItem,
     updateQuantity,
     clearCart,
+    loadCart,
     subtotal,
     tax,
     donasi,
