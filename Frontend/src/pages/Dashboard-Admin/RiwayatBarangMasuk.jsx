@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useMemo } from 'react';
+import { useNavigate, useOutletContext } from 'react-router-dom';
 import {
   MdArrowBack,
   MdHistory,
@@ -33,6 +33,8 @@ function getProductEmoji(categoryNames = '') {
 
 export default function RiwayatBarangMasuk() {
   const navigate = useNavigate();
+  const { searchQuery } = useOutletContext(); // <--- UNIVERSAL SEARCH
+
   const [batches, setBatches] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -48,7 +50,22 @@ export default function RiwayatBarangMasuk() {
       }
     };
     loadData();
+
+    const handleGlobalSync = () => loadData();
+    window.addEventListener('global-sync', handleGlobalSync);
+    return () => window.removeEventListener('global-sync', handleGlobalSync);
   }, []);
+
+  const filteredBatches = useMemo(() => {
+    if (!searchQuery) return batches;
+    const lowerQuery = searchQuery.toLowerCase();
+    return batches.filter(
+      (b) =>
+        (b.produk && b.produk.nama_produk.toLowerCase().includes(lowerQuery)) ||
+        (b.produk && b.produk.sku.toLowerCase().includes(lowerQuery)) ||
+        (b.supplier && b.supplier.toLowerCase().includes(lowerQuery))
+    );
+  }, [batches, searchQuery]);
 
   return (
     <div className="max-w-6xl mx-auto p-6">
@@ -81,7 +98,7 @@ export default function RiwayatBarangMasuk() {
           <div className="text-center py-20 bg-white border rounded-3xl text-gray-500">
             Memuat riwayat...
           </div>
-        ) : batches.length === 0 ? (
+        ) : filteredBatches.length === 0 ? (
           <div className="text-center py-20 bg-white border rounded-3xl border-dashed">
             <div className="w-16 h-16 bg-gray-100 text-gray-400 rounded-full flex items-center justify-center mx-auto mb-4">
               <MdHistory size={32} />
@@ -90,11 +107,11 @@ export default function RiwayatBarangMasuk() {
               Belum Ada Riwayat
             </h3>
             <p className="text-gray-500">
-              Riwayat barang masuk akan muncul di sini setelah Anda mencatat stok baru.
+              Riwayat barang masuk akan muncul di sini setelah Anda mencatat stok baru atau tidak ada yang cocok dengan pencarian.
             </p>
           </div>
         ) : (
-          batches.map((batch) => {
+          filteredBatches.map((batch) => {
             const prod = batch.produk || {};
             const emoji = getProductEmoji(prod.kategori);
 

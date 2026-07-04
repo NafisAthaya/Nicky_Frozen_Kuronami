@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import toast from 'react-hot-toast';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 
 export default function ResetPassword() {
@@ -14,7 +15,7 @@ export default function ResetPassword() {
     e.preventDefault();
 
     if (password !== confirmPassword) {
-      alert('Password tidak sama');
+      toast.error('Password tidak sama');
       return;
     }
 
@@ -35,11 +36,11 @@ export default function ResetPassword() {
 
       const data = await response.json();
 
-      alert(data.message);
+      toast.error(data.message);
       navigate('/login');
     } catch (error) {
       console.error(error);
-      alert('Gagal reset password');
+      toast.error('Gagal reset password');
     }
   };
 

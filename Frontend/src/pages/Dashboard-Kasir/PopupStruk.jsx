@@ -1,10 +1,41 @@
-import { useRef } from 'react';
-import { HiOutlinePrinter, HiOutlineShare, HiOutlineDownload } from 'react-icons/hi';
+import { useState, useEffect, useRef } from 'react';
+import toast from 'react-hot-toast';
+import { HiOutlinePrinter, HiOutlineShare, HiOutlineDownload, HiOutlineDocumentText, HiOutlineCash, HiOutlineUser } from 'react-icons/hi';
+import logoNicky from '../../assets/logo-nicky-frozen.jpeg';
+import axiosInstance from '../../api/axios';
 
 function formatRupiah(num) {
   if (num === 0) return 'Rp 0';
   return 'Rp ' + num.toLocaleString('id-ID');
 }
+
+// Simple Barcode SVG Component
+const BarcodePreview = ({ code }) => {
+  const bars = [];
+  const seed = code || 'TRX20261105-0012';
+  for (let i = 0; i < seed.length * 2; i++) {
+    const charCode = seed.charCodeAt(i % seed.length);
+    const isBlack = (charCode + i) % 3 !== 0;
+    const width = ((charCode + i) % 2 === 0) ? 2 : 1;
+    bars.push({ isBlack, width });
+  }
+  
+  const totalWidth = bars.reduce((sum, bar) => sum + bar.width + 1, 0);
+  const startX = Math.max(0, (160 - totalWidth) / 2);
+
+  return (
+    <svg width="160" height="40" viewBox="0 0 160 40" className="mx-auto block">
+      {bars.reduce((acc, bar, i) => {
+        const x = acc.x;
+        acc.elements.push(
+          <rect key={i} x={x} y={0} width={bar.width} height={40} fill={bar.isBlack ? '#000' : '#fff'} />
+        );
+        acc.x += bar.width + 1;
+        return acc;
+      }, { x: startX, elements: [] }).elements}
+    </svg>
+  );
+};
 
 export default function PopupStruk({
   onClose,
@@ -12,22 +43,39 @@ export default function PopupStruk({
   kasir = 'Minji',
   items = [],
   subtotal = 0,
+  diskonTotal = 0,
   tax = 0,
+  layanan = 0,
   donasi = 0,
   total = 0,
   paymentMethod = 'tunai',
   paymentDetail = {},
 }) {
   const receiptRef = useRef(null);
-  const settings = {
-  title: 'Nicky Frozen',
-  subtitle: 'Cabang Utama',
-  address: 'Jl. Raya Pasar Minggu',
-  footerMessage: 'Terima kasih atas kunjungan Anda!',
-  showLogo: false,
-  showBarcode: true,
-  showKasir: true,
-};
+
+  const [settings, setSettings] = useState({
+    judul_struk: 'Nicky Frozen Food',
+    alamat_struk: 'Jl. Raya Boulevard No. 12, Gading Serpong, Tangerang',
+    nomor_telepon: '0812-3456-7890',
+    footer_struk: 'Terima Kasih Telah Berbelanja!',
+    tampilkan_logo: false,
+    tampilkan_barcode: true,
+    tampilkan_nama_kasir: true,
+  });
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const res = await axiosInstance.get('/kasir/pengaturan-toko');
+        if (res.data && res.data.data) {
+          setSettings(res.data.data);
+        }
+      } catch (err) {
+        console.error("Gagal mengambil pengaturan struk", err);
+      }
+    };
+    loadSettings();
+  }, []);
 
   const now = new Date();
   const dateStr = now.toLocaleDateString('id-ID', {
@@ -46,7 +94,7 @@ export default function PopupStruk({
     qris: 'QRIS',
   };
 
-  const invoiceNumber = transactionId.replace('#', '').replace(/-/g, '');
+  const invoiceNumber = String(transactionId || '#NF-000000').replace('#', '').replace(/-/g, '');
 
   const handlePrint = () => {
     window.print();
@@ -54,8 +102,9 @@ export default function PopupStruk({
 
   const handleShare = () => {
     const lines = [
-      settings.title,
-      settings.subtitle,
+      settings.judulStruk,
+      settings.alamatStruk,
+      settings.nomorTelepon,
       `ID: ${transactionId}`,
       ...(settings.showKasir !== false ? [`Kasir: ${kasir}`] : []),
       `Tgl: ${dateStr} ${timeStr}`,
@@ -63,7 +112,9 @@ export default function PopupStruk({
       ...items.map((item) => `${item.quantity}x ${item.name} - ${formatRupiah(item.price * item.quantity)}`),
       '─'.repeat(30),
       `Subtotal: ${formatRupiah(subtotal)}`,
-      `Pajak (11%): ${formatRupiah(tax)}`,
+      ...(diskonTotal > 0 ? [`Diskon: -${formatRupiah(diskonTotal)}`] : []),
+      `Pajak (PB1/PPN): ${formatRupiah(tax)}`,
+      ...(layanan > 0 ? [`Biaya Layanan: ${formatRupiah(layanan)}`] : []),
       ...(donasi > 0 ? [`Donasi: ${formatRupiah(donasi)}`] : []),
       `TOTAL: ${formatRupiah(total)}`,
       `Metode: ${methodLabel[paymentMethod] || paymentMethod}`,
@@ -74,25 +125,25 @@ export default function PopupStruk({
           ]
         : []),
       '─'.repeat(30),
-      settings.footerMessage,
+      settings.footerStruk,
     ];
 
     const text = lines.join('\n');
 
     if (navigator.clipboard) {
       navigator.clipboard.writeText(text).then(() => {
-        alert('Struk berhasil disalin ke clipboard!');
+        toast.success('Struk berhasil disalin ke clipboard!');
       });
     } else {
-      alert('Clipboard tidak tersedia');
+      toast.error('Clipboard tidak tersedia');
     }
   };
 
   const handleDownload = () => {
     const lines = [
-      settings.title,
-      settings.subtitle,
-      ...(settings.address ? settings.address.split('\n') : []),
+      settings.judulStruk,
+      settings.alamatStruk,
+      settings.nomorTelepon,
       '',
       ...(settings.showKasir !== false ? [`Kasir: ${kasir}    No: ${transactionId}`] : [`No: ${transactionId}`]),
       `Tgl: ${dateStr} ${timeStr}    Term: ${methodLabel[paymentMethod] || paymentMethod}`,
@@ -105,7 +156,9 @@ export default function PopupStruk({
       }),
       '═'.repeat(40),
       `${'Subtotal'.padEnd(28)}${formatRupiah(subtotal)}`,
-      `${'Pajak (11%)'.padEnd(28)}${formatRupiah(tax)}`,
+      ...(diskonTotal > 0 ? [`${'Diskon'.padEnd(28)}-${formatRupiah(diskonTotal)}`] : []),
+      `${'Pajak (PB1/PPN)'.padEnd(28)}${formatRupiah(tax)}`,
+      ...(layanan > 0 ? [`${'Biaya Layanan'.padEnd(28)}${formatRupiah(layanan)}`] : []),
       ...(donasi > 0 ? [`${'Donasi (Pembulatan)'.padEnd(28)}${formatRupiah(donasi)}`] : []),
       '',
       `TOTAL    ${formatRupiah(total)}`,
@@ -117,7 +170,7 @@ export default function PopupStruk({
         : []),
       '═'.repeat(40),
       '',
-      settings.footerMessage,
+      settings.footerStruk,
       '',
       invoiceNumber,
     ];
@@ -133,187 +186,326 @@ export default function PopupStruk({
   };
 
   return (
-  <div
-    className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[9999] p-5"
-    onClick={onClose}
-  >
     <div
-      className="flex flex-col items-center gap-3 w-full max-w-[340px] max-h-[95vh]"
-      onClick={(e) => e.stopPropagation()}
+      className="fixed inset-0 z-[2000] flex flex-col items-center justify-center overflow-y-auto p-6 bg-slate-900/60 backdrop-blur-sm print:bg-white print:p-0"
+      onClick={onClose}
     >
-      {/* Action Buttons */}
-      <div className="flex gap-4">
-        <button
-          onClick={handlePrint}
-          title="Cetak"
-          className="w-10 h-10 rounded-full bg-[#082B7A] text-white flex items-center justify-center text-xl hover:bg-[#0A379C] transition"
-        >
-          <HiOutlinePrinter />
-        </button>
+      <div 
+        className="w-full max-w-5xl flex flex-col items-center print:hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="text-center mb-8">
+          <div className="w-20 h-20 rounded-full bg-white shadow-lg flex items-center justify-center mx-auto mb-4">
+            <HiOutlineDocumentText className="text-[#082B7A] text-5xl" />
+          </div>
+          <h1 className="text-4xl font-extrabold text-white mb-2">
+            Detail Transaksi
+          </h1>
+          <p className="text-slate-200">
+            Riwayat pemesanan untuk referensi dan cetak ulang.
+          </p>
+        </div>
 
-        <button
-          onClick={handleShare}
-          title="Bagikan"
-          className="w-10 h-10 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-xl hover:bg-slate-300 transition"
-        >
-          <HiOutlineShare />
-        </button>
+        <div className="flex flex-wrap justify-center items-start gap-6 w-full">
+          {/* Receipt Card */}
+          <div className="bg-white rounded-[32px] p-8 w-[420px] shadow-2xl">
+            <div className="flex justify-between items-start mb-8">
+              <div className="text-center w-full">
+                {settings.tampilkan_logo && (
+                  <div className="w-16 h-16 rounded-full mx-auto mb-3 overflow-hidden border-2 border-gray-100 shadow-sm">
+                    <img src={logoNicky} alt="Logo" className="w-full h-full object-cover" />
+                  </div>
+                )}
+                <h3 className="text-xl font-bold text-blue-900">
+                  {settings.judulStruk || 'Nicky Frozen'}
+                </h3>
+                {settings.alamatStruk && (
+                  <p className="text-xs text-slate-500 mt-1 whitespace-pre-line leading-relaxed max-w-[250px] mx-auto">
+                    {settings.alamatStruk}
+                  </p>
+                )}
+                {settings.nomorTelepon && (
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Telp: {settings.nomorTelepon}
+                  </p>
+                )}
+              </div>
+            </div>
+            
+            <div className="flex justify-between items-center mb-4 text-xs text-slate-500 font-medium px-2">
+              <div className="flex flex-col">
+                <span>{dateStr} {timeStr}</span>
+                {settings.tampilkan_nama_kasir && <span>Kasir: <span className="font-bold text-slate-700">{kasir}</span></span>}
+              </div>
+              <div className="flex flex-col text-right">
+                <span>ID: {transactionId}</span>
+              </div>
+            </div>
 
-        <button
-          onClick={handleDownload}
-          title="Download"
-          className="w-10 h-10 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-xl hover:bg-slate-300 transition"
-        >
-          <HiOutlineDownload />
-        </button>
+            <div className="border-y border-dashed border-slate-300 py-5 mb-5 flex flex-col gap-3">
+              {items.map((item) => (
+                <div className="flex justify-between text-sm text-slate-700" key={item.id}>
+                  <span>
+                    {item.quantity}x {item.name}
+                  </span>
+                  <strong className="text-slate-900">
+                    {formatRupiah(item.price * item.quantity)}
+                  </strong>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex flex-col gap-3 mb-8">
+              <div className="flex justify-between text-sm text-slate-500">
+                <span>Subtotal</span>
+                <span>{formatRupiah(subtotal)}</span>
+              </div>
+              {diskonTotal > 0 && (
+                <div className="flex justify-between text-sm text-orange-500">
+                  <span>Diskon</span>
+                  <span>-{formatRupiah(diskonTotal)}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-sm text-slate-500">
+                <span>Pajak (PB1/PPN)</span>
+                <span>{formatRupiah(tax)}</span>
+              </div>
+              {layanan > 0 && (
+                <div className="flex justify-between text-sm text-slate-500">
+                  <span>Biaya Layanan</span>
+                  <span>{formatRupiah(layanan)}</span>
+                </div>
+              )}
+              {donasi > 0 && (
+                <div className="flex justify-between text-sm text-slate-500">
+                  <span>Donasi (Pembulatan)</span>
+                  <span>{formatRupiah(donasi)}</span>
+                </div>
+              )}
+              <div className="flex justify-between border-t border-slate-200 pt-3 mt-1 text-base font-bold text-slate-900">
+                <span>Total</span>
+                <span>{formatRupiah(total)}</span>
+              </div>
+            </div>
+
+            <div className="text-center text-xs text-slate-400 bg-slate-50 p-3 rounded-lg mb-4">
+              METODE: {methodLabel[paymentMethod] || String(paymentMethod || 'TUNAI').toUpperCase()}
+            </div>
+
+            {settings.tampilkan_barcode && (
+              <div className="mb-4 text-center">
+                <BarcodePreview code={transactionId} />
+                <p className="text-[10px] text-slate-400 mt-1">{transactionId}</p>
+              </div>
+            )}
+
+            {settings.footer_struk && (
+              <div className="text-center text-xs text-slate-500 italic px-4">
+                {settings.footer_struk}
+              </div>
+            )}
+          </div>
+
+          {/* Action Card */}
+          <div className="bg-white rounded-[32px] p-8 w-[320px] shadow-2xl flex flex-col gap-5">
+            <div className="flex items-center gap-4 p-4 border border-slate-200 rounded-xl bg-slate-50">
+              <div className="w-10 h-10 rounded-full bg-sky-100 text-sky-600 flex items-center justify-center text-xl">
+                <HiOutlineCash />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs text-slate-500 mb-1">Total Tagihan</span>
+                <span className="text-lg font-bold text-slate-900">{formatRupiah(total)}</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4 p-4 border border-slate-200 rounded-xl bg-slate-50">
+              <div className="w-10 h-10 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-xl">
+                <HiOutlineUser />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs text-slate-500 mb-1">Kasir</span>
+                <span className="text-lg font-bold text-slate-900">{kasir}</span>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3 mt-2">
+              <button
+                onClick={handlePrint}
+                className="
+                  w-full
+                  h-14
+                  flex
+                  items-center
+                  justify-center
+                  gap-3
+                  rounded-full
+                  bg-[#082B7A]
+                  text-white
+                  font-semibold
+                  text-base
+                  shadow-lg
+                  shadow-blue-900/30
+                  hover:bg-[#0A379C]
+                  transition
+                "
+              >
+                <HiOutlinePrinter className="text-xl" />
+                <span>Cetak Ulang Struk</span>
+              </button>
+              
+              <div className="flex gap-3">
+                <button
+                  onClick={handleShare}
+                  className="
+                    flex-1
+                    h-12
+                    flex
+                    items-center
+                    justify-center
+                    gap-2
+                    rounded-full
+                    border
+                    border-slate-300
+                    bg-white
+                    text-slate-700
+                    font-semibold
+                    hover:bg-slate-50
+                    transition
+                  "
+                >
+                  <HiOutlineShare />
+                  Bagikan
+                </button>
+                <button
+                  onClick={handleDownload}
+                  className="
+                    flex-1
+                    h-12
+                    flex
+                    items-center
+                    justify-center
+                    gap-2
+                    rounded-full
+                    border
+                    border-slate-300
+                    bg-white
+                    text-slate-700
+                    font-semibold
+                    hover:bg-slate-50
+                    transition
+                  "
+                >
+                  <HiOutlineDownload />
+                  Unduh
+                </button>
+              </div>
+
+              <button
+                onClick={onClose}
+                className="
+                  w-full
+                  h-12
+                  flex
+                  items-center
+                  justify-center
+                  rounded-full
+                  text-slate-500
+                  font-semibold
+                  hover:text-slate-700
+                  hover:bg-slate-100
+                  transition
+                  mt-2
+                "
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Receipt */}
-      <div
-        ref={receiptRef}
-        className="bg-white w-full rounded p-5 shadow-xl overflow-y-auto max-h-[calc(100vh-100px)] font-mono text-[#333]"
-      >
-        {/* Header */}
+      {/* Printable Area (Hidden on Screen, Visible on Print) */}
+      <div className="hidden print:block font-mono text-black w-[58mm] mx-auto text-[11px] leading-tight">
         <div className="text-center mb-3">
-          <h2 className="text-xl font-bold text-[#082B7A] font-sans">
-            {settings.title}
-          </h2>
-
-          <p className="font-semibold mb-1">
-            {settings.subtitle}
-          </p>
-
-          {settings.address &&
-            settings.address.split('\n').map((line, i) => (
-              <p
-                key={i}
-                className="text-[11px] leading-[1.3]"
-              >
-                {line}
-              </p>
-            ))}
+          {settings.tampilkan_logo && (
+            <div className="w-12 h-12 rounded-full mx-auto mb-2 overflow-hidden border border-black" style={{ display: 'inline-block' }}>
+              <img src={logoNicky} alt="Logo" className="w-full h-full object-cover grayscale" />
+            </div>
+          )}
+          <h2 className="text-xl font-bold text-gray-800 tracking-tight">{settings.judul_struk}</h2>
+          <p className="text-sm text-gray-500 mt-1 whitespace-pre-line">{settings.alamat_struk}</p>
+          <p className="text-sm text-gray-500">Telp: {settings.nomor_telepon}</p>
         </div>
-
-        <div className="border-t border-dashed border-gray-300 my-3" />
-
-        {/* Meta */}
-        <div className="flex flex-col gap-1 text-xs">
+        <div className="border-t border-dashed border-black my-2" />
+        <div className="flex flex-col gap-1">
           <div className="flex justify-between">
-            {settings.showKasir !== false && (
-              <span>Kasir: {kasir}</span>
-            )}
-            <span>No: {transactionId}</span>
+            {settings.tampilkan_nama_kasir && <span>Kasir: {kasir}</span>}
+            <span>No: {invoiceNumber}</span>
           </div>
-
           <div className="flex justify-between">
-            <span>
-              Tgl: {dateStr} {timeStr}
-            </span>
-            <span>
-              Term: {methodLabel[paymentMethod] || paymentMethod}
-            </span>
+            <span>{dateStr} {timeStr}</span>
+            <span>Term: {methodLabel[paymentMethod] || paymentMethod}</span>
           </div>
         </div>
-
-        <div className="border-t border-dashed border-gray-300 my-3" />
-
-        {/* Items */}
-        <div className="flex flex-col gap-3">
+        <div className="border-t border-dashed border-black my-2" />
+        <div className="flex flex-col gap-2">
           {items.map((item) => (
-            <div key={item.id} className="text-xs">
-              <p className="font-semibold mb-1">
-                {item.quantity}x {item.name}
-              </p>
-
-              <div className="flex justify-between pl-3">
+            <div key={item.id}>
+              <p className="font-semibold">{item.quantity}x {item.name}</p>
+              <div className="flex justify-between pl-2">
                 <span>@ {formatRupiah(item.price)}</span>
-                <span>
-                  {formatRupiah(item.price * item.quantity)}
-                </span>
+                <span>{formatRupiah(item.price * item.quantity)}</span>
               </div>
             </div>
           ))}
         </div>
-
-        <div className="border-t border-dashed border-gray-300 my-3" />
-
-        {/* Summary */}
-        <div className="flex flex-col gap-2 text-xs">
+        <div className="border-t border-dashed border-black my-2" />
+        <div className="flex flex-col gap-1">
           <div className="flex justify-between">
             <span>Subtotal</span>
             <span>{formatRupiah(subtotal)}</span>
           </div>
-
           <div className="flex justify-between">
             <span>Pajak (11%)</span>
             <span>{formatRupiah(tax)}</span>
           </div>
-
           {donasi > 0 && (
             <div className="flex justify-between">
-              <span>Donasi (Pembulatan)</span>
+              <span>Donasi</span>
               <span>{formatRupiah(donasi)}</span>
             </div>
           )}
         </div>
-
-        <div className="border-t border-dashed border-gray-300 my-3" />
-
-        {/* Total */}
-        <div className="flex flex-col gap-2 text-xs">
-          <div className="flex justify-between items-center font-bold text-[#082B7A]">
+        <div className="border-t border-dashed border-black my-2" />
+        <div className="flex flex-col gap-1">
+          <div className="flex justify-between font-bold text-[13px]">
             <span>TOTAL</span>
-
-            <span className="text-xl">
-              {formatRupiah(total)}
-            </span>
+            <span>{formatRupiah(total)}</span>
           </div>
-
-          {paymentMethod === 'tunai' &&
-            paymentDetail?.uangDiterima > 0 && (
-              <>
-                <div className="flex justify-between">
-                  <span>Tunai</span>
-                  <span>
-                    {formatRupiah(paymentDetail.uangDiterima)}
-                  </span>
-                </div>
-
-                <div className="flex justify-between">
-                  <span>Kembali</span>
-                  <span>
-                    {formatRupiah(paymentDetail.kembalian)}
-                  </span>
-                </div>
-              </>
-            )}
-        </div>
-
-        <div className="border-t border-dashed border-gray-300 my-3" />
-
-        {/* Footer */}
-        <div className="text-center text-xs">
-          <p>{settings.footerMessage}</p>
-
-          {settings.showBarcode !== false && (
-            <div className="mt-4 flex flex-col items-center gap-1">
-              <div className="flex h-10 justify-center">
-                {[...Array(30)].map((_, i) => (
-                  <div
-                    key={i}
-                    className={`bg-black mx-[1px] ${
-                      i % 3 === 0 ? 'w-[3px]' : 'w-[1px]'
-                    }`}
-                  />
-                ))}
+          {paymentMethod === 'tunai' && paymentDetail?.uangDiterima > 0 && (
+            <>
+              <div className="flex justify-between mt-1">
+                <span>Tunai</span>
+                <span>{formatRupiah(paymentDetail.uangDiterima)}</span>
               </div>
-
-              <p>{invoiceNumber}</p>
-            </div>
+              <div className="flex justify-between">
+                <span>Kembali</span>
+                <span>{formatRupiah(paymentDetail.kembalian)}</span>
+              </div>
+            </>
           )}
+        </div>
+        <div className="border-t border-dashed border-black my-2" />
+        {settings.tampilkan_barcode && (
+          <div className="text-center my-4">
+            <BarcodePreview code={transactionId} />
+            <p className="mt-1">{transactionId}</p>
+          </div>
+        )}
+        <div className="text-center mt-4">
+          <p className="text-center text-sm text-gray-500 mt-6 italic">{settings.footer_struk}</p>
         </div>
       </div>
     </div>
-  </div>
-);
+  );
 }

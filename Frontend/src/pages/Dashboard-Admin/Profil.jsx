@@ -8,32 +8,24 @@ import {
 
 import SuccessModal from '../../components/admin/SuccessModal.jsx';
 
-function loadProfileFromStorage() {
+function loadUserFromStorage() {
   try {
-    const raw = localStorage.getItem('nf_profile');
+    const raw = localStorage.getItem('user');
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
   }
 }
 
-function saveProfileToStorage(data) {
-  try {
-    localStorage.setItem('nf_profile', JSON.stringify(data));
-  } catch {}
-}
-
 export default function Profil() {
-  const stored = loadProfileFromStorage();
+  const user = loadUserFromStorage();
 
-  const [isSuccessOpen, setIsSuccessOpen] =
-    useState(false);
+  const [isSuccessOpen, setIsSuccessOpen] = useState(false);
+  const [showComingSoon, setShowComingSoon] = useState(false);
 
   const [formData, setFormData] = useState({
-    nama: stored?.nama || 'Nicky Frozen',
-    email:
-      stored?.email ||
-      'manager@nickyfrozen.com',
+    nama: user?.name || 'Nicky Frozen',
+    email: user?.email || 'manager@nickyfrozen.com',
     currentPassword: '',
     newPassword: '',
   });
@@ -48,10 +40,14 @@ export default function Profil() {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    saveProfileToStorage({
-      nama: formData.nama,
-      email: formData.email,
-    });
+    // Ideally this would make an API call to update the backend profile
+    // For now, we update the local storage user object
+    if (user) {
+      const updatedUser = { ...user, name: formData.nama, email: formData.email };
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      // Dispatch an event so Sidebar and TopBar can re-render if they were listening
+      window.dispatchEvent(new Event('storage'));
+    }
 
     setFormData((prev) => ({
       ...prev,
@@ -70,7 +66,7 @@ export default function Profil() {
 
         <div className="relative">
 
-          <div className="w-32 h-32 rounded-full bg-blue-100 border-4 border-white shadow flex items-center justify-center">
+          <div className="w-32 h-32 rounded-full bg-blue-100 border-4 border-white shadow flex items-center justify-center overflow-hidden">
             <MdImage
               size={48}
               className="text-[#082B7A] opacity-50"
@@ -97,7 +93,7 @@ export default function Profil() {
             {formData.nama}
           </h1>
 
-          <p className="text-gray-500 mt-1">
+          <p className="text-gray-500 mt-1 capitalize">
             Admin
           </p>
         </div>
@@ -269,6 +265,7 @@ export default function Profil() {
 
             <button
               type="button"
+              onClick={() => setShowComingSoon(true)}
               className="
                 font-bold text-[#082B7A]
                 hover:underline
@@ -317,6 +314,34 @@ export default function Profil() {
         description="Perubahan informasi akun Anda telah berhasil disimpan."
         buttonText="Selesai"
       />
+
+      {/* Coming Soon Modal */}
+      {showComingSoon && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[100]">
+          <div className="bg-white rounded-3xl w-[400px] p-8 shadow-2xl text-center">
+
+            <div className="w-20 h-20 rounded-full bg-blue-50 border-2 border-blue-100 flex items-center justify-center mx-auto mb-5">
+              <MdSecurity size={40} className="text-[#082B7A]" />
+            </div>
+
+            <h3 className="text-xl font-bold text-[#082B7A] mb-2">
+              Segera Hadir!
+            </h3>
+
+            <p className="text-sm text-gray-500 leading-relaxed mb-6">
+              Fitur Verifikasi Dua Langkah melalui <strong>Gmail</strong> atau <strong>WhatsApp</strong> sedang dalam tahap pengembangan dan akan segera tersedia di pembaruan berikutnya.
+            </p>
+
+            <button
+              onClick={() => setShowComingSoon(false)}
+              className="w-full py-3 bg-[#082B7A] text-white rounded-xl font-semibold hover:bg-[#0B3B91] transition"
+            >
+              Mengerti
+            </button>
+
+          </div>
+        </div>
+      )}
 
     </div>
   );

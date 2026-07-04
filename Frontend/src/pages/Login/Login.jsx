@@ -8,74 +8,88 @@ import { Eye, EyeOff } from 'lucide-react';
 import bgLogin from '../../assets/login-bg.png';
 import logoNicky from '../../assets/logo-nicky.png';
 
+// Import "Suntikan" API dan State Management
+import useAuthStore from '../../store/authStore';
+import axiosInstance from '../../api/axios';
+
 export default function Login() {
-  const selectedBranch = JSON.parse(
-  localStorage.getItem('selectedBranch')
-  );
+  const selectedBranch = JSON.parse(localStorage.getItem('selectedBranch'));
+  
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [shift, setShift] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showForgotModal, setShowForgotModal] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); 
+  const [toastMessage, setToastMessage] = useState(null);
 
   const navigate = useNavigate();
+  const loginSuccess = useAuthStore((state) => state.loginSuccess); 
+
+  const showToast = (message) => {
+    setToastMessage(message);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 3000);
+  };
 
   const handleLogin = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
+    setIsLoading(true);
 
   try {
-    const response = await fetch(
-      'http://127.0.0.1:8000/api/login',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username,
-          password,
-        }),
-      }
-    );
+    const response = await axiosInstance.post('/login', {
+      username,
+      password,
+    });
 
-    const data = await response.json();
+    const { user, access_token } = response.data;
 
-    if (!response.ok) {
-      alert(data.message);
+    if (user.role === 'kasir' && !shift) {
+      showToast('Kasir wajib memilih shift terlebih dahulu');
+      setIsLoading(false);
       return;
     }
 
-    localStorage.setItem(
-      'user',
-      JSON.stringify(data.user)
-    );
-    
-    const selectedBranch = JSON.parse(
-    localStorage.getItem('selectedBranch')
-      );
+    // Validasi cabang
+    if (
+      user.role !== 'owner' &&
+      selectedBranch &&
+      user.cabang_id !== selectedBranch.id
+    ) {
+      showToast('Akun tidak sesuai dengan cabang yang dipilih');
+      return;
+    }
 
-      if (
-        data.user.role !== 'owner' &&
-        data.user.cabang_id !== selectedBranch.id
-      ) {
-        alert('Akun tidak sesuai dengan cabang yang dipilih');
-        return;
-      }
+    // Simpan token & user
+    loginSuccess(user, access_token);
+    localStorage.setItem('user', JSON.stringify(user));
+    if (user.role === 'kasir') {
+      localStorage.setItem('shift', shift);
+      localStorage.setItem('loginTime', new Date().toISOString());
+    }
 
-    if (data.user.role === 'owner') {
+    // Redirect sesuai role
+    if (user.role === 'owner') {
       navigate('/owner');
-    }
-
-    if (data.user.role === 'admin') {
+    } else if (user.role === 'admin') {
       navigate('/admin');
-    }
-
-    if (data.user.role === 'kasir') {
+    } else if (user.role === 'kasir') {
       navigate('/kasir');
+    } else {
+      navigate('/owner');
     }
 
   } catch (error) {
     console.error(error);
-    alert('Gagal terhubung ke server');
+
+    const errorMessage =
+      error.response?.data?.message || 'Gagal terhubung ke server';
+
+    showToast(errorMessage);
+
+  } finally {
+    setIsLoading(false);
   }
 };
 
@@ -111,27 +125,27 @@ export default function Login() {
               Sistem Point of Sale
             </p>
 
-          {selectedBranch && (
-  <>
-            <p className="mt-3 text-sm font-semibold text-blue-700">
-              {selectedBranch.name}
-            </p>
+            {selectedBranch && (
+              <>
+                <p className="mt-3 text-sm font-semibold text-blue-700">
+                  {selectedBranch.name}
+                </p>
 
-            <button
-              type="button"
-              onClick={() => navigate('/')}
-              className="text-xs text-blue-600 hover:underline mt-1"
-            >
-              Ganti Cabang
-            </button>
-          </>
-        )}
+                <button
+                  type="button"
+                  onClick={() => navigate('/')}
+                  className="text-xs text-blue-600 hover:underline mt-1"
+                >
+                  Ganti Cabang
+                </button>
+              </>
+            )}
           </div>
 
           {/* Form */}
           <form onSubmit={handleLogin} className="space-y-5">
             <Input
-              label="Username / ID Pengguna"
+              label="Email / Username"
               type="text"
               placeholder="Masukkan username"
               value={username}
@@ -177,19 +191,19 @@ export default function Login() {
                     />
                   </svg>
                 }
-                 rightIcon={
-                <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                {showPassword ? (
-                  <EyeOff size={18} />
-                ) : (
-                  <Eye size={18} />
-                )}
-              </button>
-      }
+                rightIcon={
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="text-gray-400 hover:text-gray-600 focus:outline-none"
+                  >
+                    {showPassword ? (
+                      <EyeOff size={18} />
+                    ) : (
+                      <Eye size={18} />
+                    )}
+                  </button>
+                }
               />
 
               <div className="flex items-center justify-between mt-3">
@@ -198,7 +212,7 @@ export default function Login() {
                     type="checkbox"
                     checked={showPassword}
                     onChange={() => setShowPassword(!showPassword)}
-                    className="w-4 h-4"
+                    className="w-4 h-4 text-blue-600 focus:ring-blue-500 rounded border-gray-300"
                   />
                   <span className="text-xs text-gray-600">
                     Tampilkan password
@@ -215,13 +229,28 @@ export default function Login() {
               </div>
             </div>
 
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-semibold text-gray-700">Shift (Khusus Kasir)</label>
+              <select
+                value={shift}
+                onChange={(e) => setShift(e.target.value)}
+                className="w-full h-12 px-4 rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-sm text-gray-700 bg-white"
+              >
+                <option value="">Pilih Shift</option>
+                <option value="Shift 1">Shift 1 (06.00 - 10.00)</option>
+                <option value="Shift 2">Shift 2 (10.00 - 14.00)</option>
+                <option value="Shift 3">Shift 3 (14.00 - 18.00)</option>
+                <option value="Shift 4">Shift 4 (18.00 - 22.00)</option>
+              </select>
+            </div>
+
             <Button
               type="submit"
               fullWidth
-              disabled={!username.trim() || !password.trim()}
-              className="bg-blue-700 hover:bg-blue-800 text-white rounded-xl h-14"
+              disabled={!username.trim() || !password.trim() || isLoading}
+              className="bg-blue-700 hover:bg-blue-800 text-white rounded-xl h-14 transition-colors duration-200 mt-2"
             >
-              Login
+              {isLoading ? 'Memproses...' : 'Login'}
             </Button>
           </form>
 
@@ -233,19 +262,29 @@ export default function Login() {
       </div>
 
       {/* Server Status */}
-      <div className="absolute bottom-8 w-full max-w-md px-6 flex justify-between text-xs text-white tracking-widest">
+      <div className="absolute bottom-8 w-full max-w-md px-6 flex justify-between text-xs text-white tracking-widest font-medium">
         <div className="flex items-center gap-2">
-          <div className="w-2 h-2 bg-green-400 rounded-full" />
+          <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
           SERVER TERHUBUNG
         </div>
 
-        <div>V2.4.0-ARCTIC</div>
+        <div>V2.4.0-KURONAMI</div>
       </div>
 
       <ForgotPasswordModal
         isOpen={showForgotModal}
         onClose={() => setShowForgotModal(false)}
       />
+
+      {/* Custom Toast Notification */}
+      {toastMessage && (
+        <div className="fixed top-8 left-1/2 -translate-x-1/2 z-[9999] px-6 py-3 bg-red-600 text-white font-medium rounded-2xl shadow-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-300">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span className="text-sm">{toastMessage}</span>
+        </div>
+      )}
     </div>
   );
 }

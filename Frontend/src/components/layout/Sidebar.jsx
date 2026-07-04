@@ -3,6 +3,10 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import ownerProfile from '../../assets/OwnerProfile.png';
 import { MdOutlineLogout } from 'react-icons/md';
 
+// Import "Suntikan" API dan State Management
+import useAuthStore from '../../store/authStore';
+import axiosInstance from '../../api/axios';
+
 const menuItems = [
   {
     id: 'beranda',
@@ -31,6 +35,16 @@ const menuItems = [
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+    ),
+  },
+  {
+    id: 'persetujuan-stok',
+    label: 'Persetujuan Stok',
+    path: '/owner/persetujuan-stok',
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
       </svg>
     ),
   },
@@ -106,9 +120,18 @@ export default function Sidebar() {
   const navigate = useNavigate();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
-  const userRole = localStorage.getItem('userRole') || 'owner';
-  const userName = localStorage.getItem('userName') || 'Nicky Owner';
-  const userAvatar = localStorage.getItem('userAvatar') || `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=2563eb&color=fff&bold=true&size=40`;
+  // 1. Ambil data user dari Zustand (hasil dari Login.jsx yang baru)
+  const user = useAuthStore((state) => state.user);
+  const logoutSuccess = useAuthStore((state) => state.logoutSuccess);
+
+  // Default fallback kalau data user sedang dimuat
+  const userRole = user?.role || 'owner';
+  const userName = user?.name || 'Loading...';
+  
+  // Gunakan ownerProfile untuk owner, atau UI Avatars untuk kasir/admin
+  const userAvatar = userRole === 'owner' 
+    ? ownerProfile 
+    : `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=2563eb&color=fff&bold=true&size=40`;
 
   // Filter main menu
   const filteredMenuItems = menuItems.filter((item) => {
@@ -143,11 +166,24 @@ export default function Sidebar() {
     navigate(item.path);
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('userRole');
-    localStorage.removeItem('userName');
-    localStorage.removeItem('userAvatar');
-    navigate('/');
+  // 2. Suntikan Fungsi Logout API
+  const handleLogout = async () => {
+    try {
+      // Tembak API Laravel untuk matikan token di server
+      await axiosInstance.post('/logout');
+    } catch (error) {
+      console.error("Gagal logout dari server:", error);
+    } finally {
+      // Hapus data dari Zustand & LocalStorage
+      logoutSuccess();
+      
+      // Bersihkan sisa-sisa localStorage lama (jika ada)
+      localStorage.removeItem('user');
+      localStorage.removeItem('selectedBranch');
+      
+      // Tendang ke halaman login
+      navigate('/login');
+    }
   };
 
   const renderMenuItem = (item) => {
@@ -175,18 +211,20 @@ export default function Sidebar() {
   };
 
   return (
-    <>
-      <aside className="fixed left-0 top-0 h-screen w-[280px] bg-[#082B7A] flex flex-col z-50">
-        {/* Brand */}
-        <div className="px-6 pt-6 pb-2">
-          <h1 className="text-xl font-bold text-white tracking-tight">Nicky Frozen</h1>
-        </div>
+<>
+  <aside className="fixed left-0 top-0 h-screen w-[280px] bg-[#082B7A] flex flex-col z-50">
+    {/* Brand */}
+    <div className="px-6 pt-6 pb-2">
+      <h1 className="text-xl font-bold text-white tracking-tight">
+        Nicky Frozen
+      </h1>
+    </div>
 
         {/* User Profile */}
         <div className="px-6 py-4 flex items-center gap-3 border-b border-[#5A7AC9]">
           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-sm overflow-hidden">
             <img
-              src={ownerProfile}
+              src={userAvatar}
               alt="Avatar"
               className="w-full h-full object-cover"
             />

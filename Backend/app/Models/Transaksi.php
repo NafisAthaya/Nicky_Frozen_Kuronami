@@ -15,12 +15,19 @@ class Transaksi extends Model
         'nama_pelanggan',
         'subtotal',
         'diskon',
+        'pajak',
+        'pembulatan_donasi',
         'total_tagihan',
         'metode_pembayaran',
         'uang_diterima',
         'kembalian',
         'status',
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 
     public function details()
     {

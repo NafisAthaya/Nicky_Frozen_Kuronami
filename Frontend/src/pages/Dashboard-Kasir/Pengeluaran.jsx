@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
+import axiosInstance from '../../api/axios';
 
 import {
   HiOutlineCash,
@@ -52,11 +54,8 @@ export default function Pengeluaran() {
   const [expenses, setExpenses] = useState([]);
   const loadExpenses = async () => {
   try {
-    const response = await fetch(
-      'http://127.0.0.1:8000/api/pengeluaran'
-    );
-
-    const data = await response.json();
+      const response = await axiosInstance.get('/kasir/pengeluaran');
+      const data = response.data.data || response.data; // adjust based on API response structure
 
     const mapped = data.map((item) => ({
       id: item.id,
@@ -83,8 +82,12 @@ export default function Pengeluaran() {
   const totalPengeluaran = expenses.reduce((sum, item) => sum + item.nominal, 0);
 
   useEffect(() => {
-  loadExpenses();
-}, []);
+    loadExpenses();
+
+    const handleGlobalSync = () => loadExpenses();
+    window.addEventListener('global-sync', handleGlobalSync);
+    return () => window.removeEventListener('global-sync', handleGlobalSync);
+  }, []);
 
   // Auto-hide toast
   useEffect(() => {
@@ -97,11 +100,11 @@ export default function Pengeluaran() {
   const handleSubmit = async () => {
     const num = parseFloat(nominal.replace(/[^0-9]/g, ''));
     if (!namaBiaya.trim()) {
-      alert('Masukkan nama biaya terlebih dahulu.');
+      toast.error('Masukkan nama biaya terlebih dahulu.');
       return;
     }
     if (isNaN(num) || num <= 0) {
-      alert('Masukkan nominal yang valid.');
+      toast.error('Masukkan nominal yang valid.');
       return;
     }
 
@@ -117,24 +120,13 @@ export default function Pengeluaran() {
     }
 
 try {
-  const response = await fetch(
-    'http://127.0.0.1:8000/api/pengeluaran',
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        kategori,
-        nama_biaya: namaBiaya.trim(),
-        nominal: num,
-      }),
-    }
-  );
+  const response = await axiosInstance.post('/kasir/pengeluaran', {
+    kategori,
+    nama_biaya: namaBiaya.trim(),
+    nominal: num,
+  });
 
-  const result = await response.json();
-
-  if (result.success) {
+  if (response.data.success || response.data.status === 'success') {
     await loadExpenses();
   }
 } catch (error) {

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { MdClose, MdSave } from 'react-icons/md';
-import { useApp } from '../../context/AppContext';
+import { addKategori, updateKategori } from '../../services/adminApi';
 
 export default function TambahKategoriModal({
   isOpen,
@@ -8,15 +8,10 @@ export default function TambahKategoriModal({
   onSuccess,
   editData = null,
 }) {
-  const {
-    addCategory,
-    updateCategory,
-    isCategoryNameTaken,
-  } = useApp();
-
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const isEditMode = !!editData;
 
@@ -34,7 +29,7 @@ export default function TambahKategoriModal({
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!name.trim()) {
@@ -42,37 +37,28 @@ export default function TambahKategoriModal({
       return;
     }
 
-    if (
-      isCategoryNameTaken(
-        name,
-        isEditMode ? editData.id : null
-      )
-    ) {
-      setError(
-        'Nama kategori sudah ada. Gunakan nama lain.'
-      );
-      return;
-    }
-
-    if (isEditMode) {
-      updateCategory(
-        editData.id,
-        name,
-        description
-      );
-    } else {
-      addCategory(name, description);
-    }
-
-    setName('');
-    setDescription('');
+    setLoading(true);
     setError('');
 
-    onSuccess();
+    try {
+      if (isEditMode) {
+        await updateKategori(editData.id, { name, description });
+      } else {
+        await addKategori({ name, description });
+      }
+
+      setName('');
+      setDescription('');
+      onSuccess();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Terjadi kesalahan saat menyimpan kategori.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleOverlayClick = (e) => {
-    if (e.target === e.currentTarget) {
+    if (e.target === e.currentTarget && !loading) {
       onClose();
     }
   };
@@ -156,12 +142,13 @@ export default function TambahKategoriModal({
 
             <button
               type="submit"
-              className="flex items-center gap-2 rounded-xl bg-[#082B7A] px-5 py-3 font-bold text-white hover:bg-[#0B3B91] transition-colors shadow-sm"
+              disabled={loading}
+              className={`flex items-center gap-2 rounded-xl px-5 py-3 font-bold text-white transition-colors shadow-sm ${
+                loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#082B7A] hover:bg-[#0B3B91]'
+              }`}
             >
               <MdSave size={20} />
-              {isEditMode
-                ? 'Simpan Perubahan'
-                : 'Simpan Kategori'}
+              {loading ? 'Menyimpan...' : isEditMode ? 'Simpan Perubahan' : 'Simpan Kategori'}
             </button>
           </div>
         </form>

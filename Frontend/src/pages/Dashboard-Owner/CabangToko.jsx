@@ -1,46 +1,19 @@
-import { useState } from 'react';
-
-const initialBranches = [
-  {
-    id: 'CBG-01',
-    name: 'Cabang Utama',
-    address: 'Jl. Raya Sudirman No. 10, Jakarta Selatan',
-    manager: 'Minji',
-    hours: '08:00 - 21:00',
-    status: 'Buka',
-  },
-  {
-    id: 'CBG-02',
-    name: 'Cabang Kelapa Gading',
-    address: 'Jl. Boulevard Raya Blok M, Jakarta Utara',
-    manager: 'Hanni',
-    hours: '09:00 - 22:00',
-    status: 'Buka',
-  },
-  {
-    id: 'CBG-03',
-    name: 'Cabang Depok',
-    address: 'Jl. Margonda Raya No. 45, Depok',
-    manager: 'Danielle',
-    hours: '08:00 - 21:00',
-    status: 'Buka',
-  },
-  {
-    id: 'CBG-04',
-    name: 'Cabang Bekasi',
-    address: 'Jl. Jend. Ahmad Yani No. 12, Bekasi',
-    manager: 'Hyein',
-    hours: '10:00 - 22:00',
-    status: 'Tutup/Renovasi',
-  },
-];
-
-const managersList = ['Minji', 'Hanni', 'Danielle', 'Hyein', 'Haerin', 'Paijo'];
+import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
+import axiosInstance from '../../api/axios';
+import WarningModal from '../../components/admin/WarningModal';
 
 export default function CabangToko() {
-  const [branches, setBranches] = useState(initialBranches);
+  // State API
+  const [branches, setBranches] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // State Modal
   const [showAddModal, setShowAddModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [branchToDelete, setBranchToDelete] = useState(null);
 
   // Form states
   const [newName, setNewName] = useState('');
@@ -48,52 +21,111 @@ export default function CabangToko() {
   const [newManager, setNewManager] = useState('');
   const [newHours, setNewHours] = useState('08:00 - 21:00');
 
+  // Fetch Data
+  const fetchBranches = async () => {
+    try {
+      const response = await axiosInstance.get('/owner/cabang');
+      setBranches(response.data.data);
+    } catch (error) {
+      console.error("Gagal mengambil data cabang:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchBranches();
+
+    const handleGlobalSync = () => fetchBranches();
+    window.addEventListener('global-sync', handleGlobalSync);
+    return () => window.removeEventListener('global-sync', handleGlobalSync);
+  }, []);
+
   const totalBranches = branches.length;
   const activeBranches = branches.filter((b) => b.status === 'Buka').length;
 
-  const handleAddBranch = (e) => {
+  // Handlers
+  const handleAddBranch = async (e) => {
     e.preventDefault();
     if (!newName.trim() || !newAddress.trim()) return;
+    setIsSaving(true);
 
-    const nextIdNumber = branches.length + 1;
-    const nextId = `CBG-${nextIdNumber < 10 ? '0' + nextIdNumber : nextIdNumber}`;
+    try {
+      const payload = {
+        nama_cabang: newName,
+        alamat: newAddress,
+        manajer: newManager,
+        jam_operasional: newHours
+      };
 
-    const newBranch = {
-      id: nextId,
-      name: newName,
-      address: newAddress,
-      manager: newManager || 'Belum Ditentukan',
-      hours: newHours || '08:00 - 21:00',
-      status: 'Buka',
-    };
+      const response = await axiosInstance.post('/owner/cabang', payload);
+      setBranches([...branches, response.data.data]);
+      
+      setShowAddModal(false);
+      setShowSuccessModal(true);
 
-    setBranches([...branches, newBranch]);
-    setShowAddModal(false);
-    setShowSuccessModal(true);
-
-    // Clear form
-    setNewName('');
-    setNewAddress('');
-    setNewManager('');
-    setNewHours('08:00 - 21:00');
+      // Clear form
+      setNewName('');
+      setNewAddress('');
+      setNewManager('');
+      setNewHours('08:00 - 21:00');
+    } catch (error) {
+      console.error("Gagal menyimpan cabang:", error);
+      toast.error('Gagal menyimpan data cabang ke server.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleDeleteBranch = (id) => {
+  const triggerDeleteBranch = (id) => {
+    setBranchToDelete(id);
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDeleteBranch = async () => {
+    if (!branchToDelete) return;
+    const id = branchToDelete;
+    setIsDeleteModalOpen(false);
+    setBranchToDelete(null);
+
+    // Optimistic UI Update
     setBranches(branches.filter((b) => b.id !== id));
+
+    try {
+      await axiosInstance.delete(`/owner/cabang/${id}`);
+    } catch (error) {
+      console.error("Gagal menghapus cabang:", error);
+      fetchBranches(); // Rollback jika gagal
+    }
   };
 
-  const toggleStatus = (id) => {
+  const toggleStatus = async (id, currentStatus) => {
+    // Optimistic UI Update
     setBranches(
       branches.map((b) =>
-        b.id === id
-          ? { ...b, status: b.status === 'Buka' ? 'Tutup/Renovasi' : 'Buka' }
-          : b
+        b.id === id ? { ...b, status: b.status === 'Buka' ? 'Tutup/Renovasi' : 'Buka' } : b
       )
     );
+
+    try {
+      await axiosInstance.put(`/owner/cabang/${id}/toggle`);
+    } catch (error) {
+      console.error("Gagal mengubah status cabang:", error);
+      // Rollback jika gagal
+      setBranches(
+        branches.map((b) =>
+          b.id === id ? { ...b, status: currentStatus } : b
+        )
+      );
+    }
   };
 
+  if (isLoading) {
+    return <div className="p-8 text-center text-gray-500 animate-pulse">Memuat daftar cabang toko...</div>;
+  }
+
   return (
-    <div className="animate-fadeIn">
+    <div className="animate-fadeIn pb-10">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -152,21 +184,21 @@ export default function CabangToko() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 text-sm">
-            {branches.map((branch) => (
+            {branches.length > 0 ? branches.map((branch) => (
               <tr key={branch.id} className="hover:bg-slate-50/50 transition-colors">
                 <td className="px-6 py-5">
                   <div>
-                    <span className="text-xs font-bold text-slate-400">{branch.id}</span>
-                    <p className="font-bold text-slate-800 text-sm mt-0.5">{branch.name}</p>
-                    <span className="text-[10px] font-semibold text-slate-400">Manajer: {branch.manager}</span>
+                    <span className="text-xs font-bold text-slate-400">CBG-{branch.id.toString().padStart(3, '0')}</span>
+                    <p className="font-bold text-slate-800 text-sm mt-0.5">{branch.nama_cabang}</p>
+                    <span className="text-[10px] font-semibold text-slate-400">Manajer: {branch.manajer || '-'}</span>
                   </div>
                 </td>
                 <td className="px-6 py-5 text-slate-500 max-w-xs leading-relaxed">
-                  {branch.address}
+                  {branch.alamat}
                 </td>
                 <td className="px-6 py-5 text-center">
                   <button
-                    onClick={() => toggleStatus(branch.id)}
+                    onClick={() => toggleStatus(branch.id, branch.status)}
                     className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all border ${
                       branch.status === 'Buka'
                         ? 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100'
@@ -179,23 +211,24 @@ export default function CabangToko() {
                 </td>
                 <td className="px-6 py-5 text-center">
                   <div className="flex items-center justify-center gap-2">
-                    <button className="w-8 h-8 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 flex items-center justify-center transition-all">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                      </svg>
-                    </button>
                     <button
-                      onClick={() => handleDeleteBranch(branch.id)}
-                      className="w-8 h-8 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 flex items-center justify-center transition-all"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      onClick={() => triggerDeleteBranch(branch.id)}
+                      className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Hapus"
+                    >  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                       </svg>
                     </button>
                   </div>
                 </td>
               </tr>
-            ))}
+            )) : (
+              <tr>
+                <td colSpan="4" className="px-6 py-10 text-center text-slate-400 text-sm font-medium">
+                  Belum ada cabang yang terdaftar di sistem.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -249,21 +282,16 @@ export default function CabangToko() {
                 />
               </div>
 
-              {/* Nama Manajer */}
+              {/* Nama Manajer (Input Text Bukan Dropdown Dummy) */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Nama Manajer</label>
-                <select
+                <input
+                  type="text"
+                  placeholder="Mis: Budi Santoso"
                   value={newManager}
                   onChange={(e) => setNewManager(e.target.value)}
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all"
-                >
-                  <option value="">Pilih Manajer Bertugas</option>
-                  {managersList.map((mgr) => (
-                    <option key={mgr} value={mgr}>
-                      {mgr}
-                    </option>
-                  ))}
-                </select>
+                  className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all"
+                />
               </div>
 
               {/* Jam Operasional */}
@@ -297,33 +325,29 @@ export default function CabangToko() {
               </button>
               <button
                 type="submit"
-                className="px-5 py-2.5 bg-[#0052cc] hover:bg-[#0047b3] text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-blue-100"
+                disabled={isSaving}
+                className="px-5 py-2.5 bg-[#0052cc] hover:bg-[#0047b3] text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-blue-100 disabled:opacity-50"
               >
-                Simpan Cabang
+                {isSaving ? 'Menyimpan...' : 'Simpan Cabang'}
               </button>
             </div>
           </form>
         </div>
       )}
 
-      {/* Modal Success: Cabang Berhasil Ditambahkan */}
+      {/* Modal Success */}
       {showSuccessModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-[32px] w-full max-w-md shadow-2xl p-8 text-center border border-slate-100 flex flex-col items-center animate-scaleIn">
-            {/* Green Check Icon */}
             <div className="w-14 h-14 rounded-full bg-green-50 border border-green-200 flex items-center justify-center text-green-500 mb-4 shadow-inner">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             </div>
-
-            {/* Title */}
             <h3 className="text-xl font-bold text-slate-800 mb-2">Cabang Berhasil Ditambahkan!</h3>
             <p className="text-xs text-slate-500 leading-relaxed mb-6 max-w-xs">
-              Data cabang baru telah berhasil disimpan ke dalam sistem. Anda sekarang dapat mulai mengelola stok dan transaksi untuk cabang ini.
+              Data cabang baru telah berhasil disimpan ke database. Anda sekarang dapat mengelola stok dan transaksi untuk cabang ini.
             </p>
-
-            {/* Button */}
             <button
               onClick={() => setShowSuccessModal(false)}
               className="w-full bg-[#0052cc] hover:bg-[#0047b3] text-white text-xs font-black py-3.5 rounded-2xl shadow-lg transition-colors"
@@ -333,6 +357,16 @@ export default function CabangToko() {
           </div>
         </div>
       )}
+
+      {/* Warning Modal Delete */}
+      <WarningModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        title="Hapus Cabang"
+        description="Peringatan: Menghapus cabang mungkin akan mempengaruhi data transaksi yang terkait. Lanjutkan?"
+        buttonText="Ya, Hapus"
+        onConfirm={confirmDeleteBranch}
+      />
     </div>
   );
 }

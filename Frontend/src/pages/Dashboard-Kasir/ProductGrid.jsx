@@ -22,29 +22,27 @@ export default function ProductGrid({
   }
 
   return (
-    <div
-      id="product-grid"
-      className="
-        grid
-        grid-cols-2
-        lg:grid-cols-3
-        xl:grid-cols-4
-        2xl:grid-cols-5
-        gap-4
-        flex-1
-        overflow-y-auto
-        pb-4
-        pr-1
-      "
-    >
-      {products.map((product) => (
-        <ProductCard
-          key={product.id}
-          product={product}
-          isSelected={cartItemIds.includes(product.id)}
-          onSelect={onAddToCart}
-        />
-      ))}
+    <div className="flex-1 overflow-y-auto pb-4 pr-1">
+      <div
+        id="product-grid"
+        className="
+          grid
+          grid-cols-2
+          lg:grid-cols-3
+          xl:grid-cols-4
+          2xl:grid-cols-5
+          gap-4
+        "
+      >
+        {products.map((product) => (
+          <ProductCard
+            key={product.id}
+            product={product}
+            isSelected={cartItemIds.includes(product.id)}
+            onSelect={onAddToCart}
+          />
+        ))}
+      </div>
     </div>
   );
 }

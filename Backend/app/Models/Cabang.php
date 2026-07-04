@@ -9,6 +9,9 @@ class Cabang extends Model
     protected $fillable = [
         'nama_cabang',
         'alamat',
+        'manajer',
+        'jam_operasional',
+        'status',
     ];
 
     public function users()

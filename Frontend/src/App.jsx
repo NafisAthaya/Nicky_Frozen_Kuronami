@@ -1,4 +1,6 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import useAuthStore from './store/authStore'; // Import Zustand Store
+import { Toaster } from 'react-hot-toast';
 
 // Login & Branch
 import Login from './pages/Login/Login';
@@ -16,6 +18,7 @@ import KasirLayout from './components/kasir/DashboardLayout';
 
 
 // Owner Pages
+// Import Halaman Dashboard Owner
 import AturHarga from './pages/Dashboard-Owner/AturHarga';
 import Beranda from './pages/Dashboard-Owner/Beranda';
 import CabangToko from './pages/Dashboard-Owner/CabangToko';
@@ -28,6 +31,7 @@ import ProfilOwner from './pages/Dashboard-Owner/Profil';
 import PusatBantuan from './pages/Dashboard-Owner/PusatBantuan';
 import StokBarangOwner from './pages/Dashboard-Owner/StokBarang';
 import Transaksi from './pages/Dashboard-Owner/Transaksi';
+import PersetujuanStokOwner from './pages/Dashboard-Owner/PersetujuanStok';
 
 // Admin Pages
 import DashboardOperasional from './pages/Dashboard-Admin/DashboardOperasional';
@@ -43,27 +47,90 @@ import RiwayatBarangMasuk from './pages/Dashboard-Admin/RiwayatBarangMasuk';
 
 // Kasir Pages
 import DashboardKasir from './pages/Dashboard-Kasir/DashboardKasir';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import BantuanKasir from './pages/Dashboard-Kasir/bantuan';
 import GantiShift from './pages/Dashboard-Kasir/GantiShift';
 import Pengeluaran from './pages/Dashboard-Kasir/Pengeluaran';
 import ProfilKasir from './pages/Dashboard-Kasir/Profil';
 import RiwayatTransaksi from './pages/Dashboard-Kasir/RiwayatTransaksi';
-import PesananTersimpan from './pages/Dashboard-Kasir/PesananTersimpan';
+
+// ----------------------------------------------------------------------
+// 1. SATPAM HALAMAN PUBLIK (Mencegah user yg sudah login buka page Login)
+// ----------------------------------------------------------------------
+const PublicRoute = ({ children }) => {
+  const { token, user } = useAuthStore();
+
+  if (token && user) {
+    // Arahkan sesuai jabatan masing-masing
+    if (user.role === 'admin') return <Navigate to="/admin" replace />;
+    if (user.role === 'kasir') return <Navigate to="/kasir" replace />;
+    return <Navigate to="/owner" replace />;
+  }
+
+  return children;
+};
+
+// ----------------------------------------------------------------------
+// 2. SATPAM HALAMAN TERLINDUNGI (Mengecek Token & Jabatan)
+// ----------------------------------------------------------------------
+const ProtectedRoute = ({ children, allowedRoles }) => {
+  const { token, user } = useAuthStore();
+
+  // Kalau tidak ada token (belum login), tendang ke login
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Kalau punya token, tapi jabatannya tidak sesuai dengan rute yang dituju
+  if (allowedRoles && user && !allowedRoles.includes(user.role)) {
+    // Lempar kembali ke ruangan masing-masing
+    if (user.role === 'admin') return <Navigate to="/admin" replace />;
+    if (user.role === 'kasir') return <Navigate to="/kasir" replace />;
+    return <Navigate to="/owner" replace />;
+  }
+
+  return children;
+};
+
 
 export default function App() {
-  return (
-    <Router>
-      <Routes>
+  const { token, user } = useAuthStore();
 
-        <Route path="/" element={<BranchSelection />} />
-        <Route path="/login" element={<Login />} />
+  return (
+    <>
+      <Toaster position="top-right" reverseOrder={false} />
+      <Router>
+        <Routes>
+          <Route
+            path="/login"
+            element={
+                <PublicRoute>
+                    <Login />
+                </PublicRoute>
+            }
+        />
         <Route path="/reset-password" element={<ResetPassword />} />
+  
+        {/* ==================== RUTE PILIH CABANG ==================== */}
+        <Route
+            path="/"
+            element={<BranchSelection />}
+        />
 
         {/* OWNER */}
-        <Route path="/owner" element={<DashboardLayout />}>
+        <Route
+          path="/owner"
+          element={
+            <ProtectedRoute allowedRoles={['owner']}>
+              <DashboardLayout />
+            </ProtectedRoute>
+          }
+        >
           <Route index element={<Beranda />} />
           <Route path="notifikasi" element={<NotifikasiOwner />} />
           <Route path="stok-barang" element={<StokBarangOwner />} />
+          <Route path="persetujuan-stok" element={<PersetujuanStokOwner />} />
+
           <Route path="laporan" element={<Laporan />} />
           <Route path="transaksi" element={<Transaksi />} />
           <Route path="atur-harga" element={<AturHarga />} />
@@ -76,7 +143,14 @@ export default function App() {
         </Route>
 
         {/* ADMIN */}
-        <Route path="/admin" element={<AdminLayout />}>
+        <Route
+          path="/admin"
+          element={
+      <ProtectedRoute allowedRoles={['admin', 'owner']}>
+        <AdminLayout />
+        </ProtectedRoute>
+    }
+>
           <Route index element={<DashboardOperasional />} />
           <Route path="notifikasi" element={<NotifikasiAdmin />} />
           <Route path="stok-barang" element={<StokBarangAdmin />} />
@@ -90,19 +164,40 @@ export default function App() {
         </Route>
         
         {/* KASIR */}
-        <Route path="/kasir" element={<KasirLayout />}>
-        <Route index element={<DashboardKasir />} />
-        <Route path="tersimpan" element={<PesananTersimpan />} />
+        <Route
+          path="/kasir"
+          element={
+        <ProtectedRoute allowedRoles={['kasir', 'owner']}>
+            <KasirLayout />
+        </ProtectedRoute>
+    }
+>
+        <Route index element={
+          <ErrorBoundary>
+            <DashboardKasir />
+          </ErrorBoundary>
+        } />
         <Route path="pengeluaran" element={<Pengeluaran />} />
         <Route path="riwayat-transaksi" element={<RiwayatTransaksi />} />
         <Route path="ganti-shift" element={<GantiShift />} />
-
         <Route path="profil" element={<ProfilKasir />} />
-
         <Route path="bantuan" element={<BantuanKasir />} />
       </Route>
 
+        {/* ==================== RUTE FALLBACK (404) ==================== */}
+        {/* Kalau user mengetik URL yang ngawur */}
+        <Route 
+          path="*" 
+          element={
+            !token ? <Navigate to="/login" /> :
+            user?.role === 'admin' ? <Navigate to="/admin" /> :
+            user?.role === 'kasir' ? <Navigate to="/kasir" replace /> :
+            user?.role === 'owner' ? <Navigate to="/owner" replace /> :
+            <Navigate to="/login" replace />
+          } 
+        />
       </Routes>
     </Router>
-  );
-}
+    </>
+    );
+  }

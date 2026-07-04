@@ -75,7 +75,7 @@ export default function PusatBantuan() {
   });
 
   return (
-    <div className="animate-fadeIn max-w-4xl">
+    <div className="animate-fadeIn w-full">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-1">Pusat Bantuan Owner</h1>

@@ -1,506 +1,462 @@
-import { useState } from 'react';
-
-const initialEmployees = [
-  {
-    id: 'EMP-01',
-    name: 'Minji',
-    email: 'minji@nickyfrozen.com',
-    phone: '+62 812-3456-7890',
-    role: 'Kasir',
-    branch: 'Cabang Utama',
-    status: 'Aktif',
-    avatar: 'https://ui-avatars.com/api/?name=Minji&background=e0f2fe&color=0369a1&bold=true&size=40',
-  },
-  {
-    id: 'EMP-02',
-    name: 'Hanni',
-    email: 'hanni@nickyfrozen.com',
-    phone: '+62 823-4567-8901',
-    role: 'Kasir',
-    branch: 'Cabang Depok',
-    status: 'Aktif',
-    avatar: 'https://ui-avatars.com/api/?name=Hanni&background=fef3c7&color=b45309&bold=true&size=40',
-  },
-  {
-    id: 'EMP-03',
-    name: 'Danielle',
-    email: 'danielle@nickyfrozen.com',
-    phone: '+62 834-5678-9012',
-    role: 'Supervisor',
-    branch: 'Cabang Kelapa Gading',
-    status: 'Aktif',
-    avatar: 'https://ui-avatars.com/api/?name=Danielle&background=dcfce7&color=15803d&bold=true&size=40',
-  },
-  {
-    id: 'EMP-04',
-    name: 'Hyein',
-    email: 'hyein@nickyfrozen.com',
-    phone: '+62 845-6789-0123',
-    role: 'Gudang',
-    branch: 'Cabang Bekasi',
-    status: 'Terblokir',
-    avatar: 'https://ui-avatars.com/api/?name=Hyein&background=fee2e2&color=b91c1c&bold=true&size=40',
-  },
-];
+import { useState, useEffect } from 'react';
+import axiosInstance from '../../api/axios';
+import useAuthStore from '../../store/authStore';
+import { HiEye, HiEyeOff } from 'react-icons/hi';
+import WarningModal from '../../components/admin/WarningModal';
 
 export default function Profil() {
-  const [activeTab, setActiveTab] = useState('profil-saya'); // 'profil-saya', 'keamanan', 'kelola-karyawan'
+  const { user, updateUser } = useAuthStore();
+  const [activeTab, setActiveTab] = useState('profil');
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Tab 1: Profil Saya states
-  const [firstName, setFirstName] = useState('Nicky');
-  const [lastName, setLastName] = useState('Owner');
-  const [email, setEmail] = useState('nickyowner@gmail.com');
-  const [phone, setPhone] = useState('+62 821-2345-6789');
-  const [profileSuccessModal, setProfileSuccessModal] = useState(false);
-
-  // Tab 2: Keamanan states
-  const [currPassword, setCurrPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [passwordSuccessModal, setPasswordSuccessModal] = useState(false);
-  const [sessions, setSessions] = useState([
-    { id: 1, device: 'Windows PC - Chrome', location: 'Jakarta, Indonesia', time: 'Hari ini, 14:32', active: true },
-    { id: 2, device: 'MacBook Pro - Safari', location: 'Bandung, Indonesia', time: 'Kemarin, 09:15', active: false }
-  ]);
-  const [sessionsClearedModal, setSessionsClearedModal] = useState(false);
-
-  // Tab 3: Kelola Karyawan states
-  const [employees, setEmployees] = useState(initialEmployees);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedRole, setSelectedRole] = useState('Semua Jabatan');
-  const [selectedBranch, setSelectedBranch] = useState('Semua Cabang');
-  
-  // Employee Modals
-  const [showAddEmpModal, setShowAddEmpModal] = useState(false);
-  const [showAddEmpSuccess, setShowAddEmpSuccess] = useState(false);
-  const [showResetPwModal, setShowResetPwModal] = useState(false);
-  const [showResetPwSuccess, setShowResetPwSuccess] = useState(false);
-  const [showBlockConfirm, setShowBlockConfirm] = useState(false);
-  
-  // Selection states
-  const [selectedEmp, setSelectedEmp] = useState(null);
-  const [generatedPw, setGeneratedPw] = useState('');
-
-  // Form states for new employee
-  const [empName, setEmpName] = useState('');
-  const [empEmail, setEmpEmail] = useState('');
-  const [empPhone, setEmpPhone] = useState('');
-  const [empRole, setEmpRole] = useState('Kasir');
-  const [empBranch, setEmpBranch] = useState('Cabang Utama');
-
-  const filteredEmployees = employees.filter((emp) => {
-    const matchesSearch = emp.name.toLowerCase().includes(searchQuery.toLowerCase()) || emp.email.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesRole = selectedRole === 'Semua Jabatan' || emp.role === selectedRole;
-    const matchesBranch = selectedBranch === 'Semua Cabang' || emp.branch === selectedBranch;
-    return matchesSearch && matchesRole && matchesBranch;
+  // --- STATE TAB 1: PROFIL SAYA ---
+  const [profileForm, setProfileForm] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: ''
   });
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
 
-  const handleAddEmployee = (e) => {
-    e.preventDefault();
-    if (!empName.trim() || !empEmail.trim()) return;
+  // --- STATE TAB 2: KEAMANAN ---
+  const [passwordForm, setPasswordForm] = useState({
+    current: '',
+    new: '',
+    confirm: ''
+  });
+  const [isSavingPassword, setIsSavingPassword] = useState(false);
+  const [showCurrentPass, setShowCurrentPass] = useState(false);
+  const [showNewPass, setShowNewPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
 
-    const newEmp = {
-      id: `EMP-0${employees.length + 1}`,
-      name: empName,
-      email: empEmail,
-      phone: empPhone || '+62 800-000-000',
-      role: empRole,
-      branch: empBranch,
-      status: 'Aktif',
-      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(empName)}&background=e0f2fe&color=0369a1&bold=true&size=40`,
+  const checkPasswordStrength = (pass) => {
+    let score = 0;
+    if (!pass) return { label: '-', bgColor: 'bg-gray-50', textColor: 'text-gray-500', borderColor: 'border-gray-200', dotColor: 'bg-gray-400' };
+    
+    if (pass.length >= 8) score += 1;
+    if (/[a-z]/.test(pass) && /[A-Z]/.test(pass)) score += 1;
+    if (/\d/.test(pass)) score += 1;
+    if (/[^a-zA-Z\d]/.test(pass)) score += 1;
+
+    if (score <= 1) return { label: 'Lemah', bgColor: 'bg-red-50', textColor: 'text-red-600', borderColor: 'border-red-200', dotColor: 'bg-red-500' };
+    if (score === 2) return { label: 'Sedang', bgColor: 'bg-yellow-50', textColor: 'text-yellow-600', borderColor: 'border-yellow-200', dotColor: 'bg-yellow-500' };
+    if (score === 3) return { label: 'Kuat', bgColor: 'bg-blue-50', textColor: 'text-blue-600', borderColor: 'border-blue-200', dotColor: 'bg-blue-500' };
+    return { label: 'Sangat Kuat', bgColor: 'bg-green-50', textColor: 'text-green-600', borderColor: 'border-green-200', dotColor: 'bg-green-500' };
+  };
+
+  const passStrength = checkPasswordStrength(passwordForm.new);
+
+  // --- STATE TAB 3: KARYAWAN ---
+  const [karyawanList, setKaryawanList] = useState([]);
+  const [cabangList, setCabangList] = useState([]);
+  const [searchKaryawan, setSearchKaryawan] = useState('');
+  const [roleFilter, setRoleFilter] = useState('Semua Jabatan');
+  const [cabangFilter, setCabangFilter] = useState('Semua Cabang');
+  
+  // State Modal Karyawan
+  const [showAddKaryawan, setShowAddKaryawan] = useState(false);
+  const [showEditKaryawan, setShowEditKaryawan] = useState(false);
+  
+  const [newKaryawan, setNewKaryawan] = useState({
+    name: '', email: '', phone: '', role: 'kasir', cabang_id: '', password: ''
+  });
+  
+  const [editKaryawanData, setEditKaryawanData] = useState(null);
+  const [isUpdatingKaryawan, setIsUpdatingKaryawan] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [karyawanToDelete, setKaryawanToDelete] = useState(null);
+
+  // --- STATE TOAST NOTIFICATION ---
+  const [toastMessage, setToastMessage] = useState(null);
+  const [toastType, setToastType] = useState('success');
+
+  const showToast = (msg, type = 'success') => {
+    setToastMessage(msg);
+    setToastType(type);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  // Fetch Data Awal
+  useEffect(() => {
+    if (user) {
+      const nameParts = user.name ? user.name.split(' ') : ['User', ''];
+      setProfileForm({
+        firstName: nameParts[0] || '',
+        lastName: nameParts.slice(1).join(' ') || '',
+        email: user.email || '',
+        phone: user.phone || ''
+      });
+    }
+
+    const fetchAllData = async () => {
+      try {
+        const resCabang = await axiosInstance.get('/owner/cabang');
+        setCabangList(resCabang.data.data || []);
+
+        const resKaryawan = await axiosInstance.get('/owner/karyawan');
+        setKaryawanList(resKaryawan.data.data || []);
+      } catch (error) {
+        console.error("Gagal menarik data profil/karyawan:", error);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
-    setEmployees([...employees, newEmp]);
-    setShowAddEmpModal(false);
-    setShowAddEmpSuccess(true);
+    if (activeTab === 'karyawan') {
+      fetchAllData();
+    } else {
+      setIsLoading(false);
+    }
 
-    // Clear forms
-    setEmpName('');
-    setEmpEmail('');
-    setEmpPhone('');
+    const handleGlobalSync = () => { if (activeTab === 'karyawan') fetchAllData(); };
+    window.addEventListener('global-sync', handleGlobalSync);
+    return () => window.removeEventListener('global-sync', handleGlobalSync);
+  }, [user, activeTab]);
+
+  // --- HANDLERS PROFIL & KEAMANAN ---
+  const handleUpdateProfile = async (e) => {
+    e.preventDefault();
+    setIsSavingProfile(true);
+    try {
+      const updatedName = `${profileForm.firstName} ${profileForm.lastName}`.trim();
+      await axiosInstance.put('/profile/update', {
+        name: updatedName,
+        email: profileForm.email,
+        phone: profileForm.phone
+      });
+      // Update global store
+      if(user) {
+        updateUser({ ...user, name: updatedName, email: profileForm.email, phone: profileForm.phone });
+      }
+      showToast('Profil berhasil diperbarui!', 'success');
+    } catch (error) {
+      showToast('Gagal memperbarui profil.', 'error');
+    } finally {
+      setIsSavingProfile(false);
+    }
   };
 
-  const triggerResetPassword = (emp) => {
-    setSelectedEmp(emp);
-    setShowResetPwModal(true);
+  const handleUpdatePassword = async (e) => {
+    e.preventDefault();
+    if (passwordForm.new !== passwordForm.confirm) {
+      return showToast('Konfirmasi kata sandi tidak cocok!', 'error');
+    }
+    setIsSavingPassword(true);
+    try {
+      await axiosInstance.put('/profile/password', passwordForm);
+      showToast('Kata sandi berhasil diperbarui!', 'success');
+      setPasswordForm({ current: '', new: '', confirm: '' });
+    } catch (error) {
+      showToast('Gagal memperbarui kata sandi. Pastikan sandi lama benar.', 'error');
+    } finally {
+      setIsSavingPassword(false);
+    }
   };
 
-  const handleResetPassword = () => {
-    // Generate a random-like password for figma flow simulation
-    const randomPass = 'nicky' + Math.floor(100 + Math.random() * 900);
-    setGeneratedPw(randomPass);
-    setShowResetPwModal(false);
-    setShowResetPwSuccess(true);
+  // --- HANDLERS KARYAWAN ---
+  const handleAddKaryawan = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await axiosInstance.post('/owner/karyawan', newKaryawan);
+      setKaryawanList([res.data.data, ...karyawanList]);
+      setShowAddKaryawan(false);
+      setNewKaryawan({ name: '', email: '', phone: '', role: 'kasir', cabang_id: '', password: '' });
+      showToast('Karyawan berhasil ditambahkan!', 'success');
+    } catch (error) {
+      const errMsg = error.response?.data?.message || 'Gagal menambahkan karyawan.';
+      showToast(`Oops! ${errMsg}`, 'error');
+    }
   };
 
-  const triggerBlockToggle = (emp) => {
-    setSelectedEmp(emp);
-    setShowBlockConfirm(true);
+  const handleOpenEdit = (karyawan) => {
+    setEditKaryawanData({
+      id: karyawan.id,
+      name: karyawan.name,
+      email: karyawan.email,
+      phone: karyawan.phone || '',
+      role: karyawan.role,
+      cabang_id: karyawan.cabang_id || '',
+      password: '' 
+    });
+    setShowEditKaryawan(true);
   };
 
-  const handleBlockToggle = () => {
-    if (!selectedEmp) return;
-    setEmployees(
-      employees.map((e) =>
-        e.id === selectedEmp.id
-          ? { ...e, status: e.status === 'Aktif' ? 'Terblokir' : 'Aktif' }
-          : e
-      )
-    );
-    setShowBlockConfirm(false);
+  const handleUpdateKaryawanSubmit = async (e) => {
+    e.preventDefault();
+    setIsUpdatingKaryawan(true);
+    try {
+      const res = await axiosInstance.put(`/owner/karyawan/${editKaryawanData.id}`, editKaryawanData);
+      setKaryawanList(karyawanList.map(k => k.id === editKaryawanData.id ? res.data.data : k));
+      setShowEditKaryawan(false);
+      showToast('Data karyawan berhasil diperbarui!', 'success');
+    } catch (error) {
+      const errMsg = error.response?.data?.message || 'Gagal memperbarui karyawan.';
+      showToast(`Oops! ${errMsg}`, 'error');
+    } finally {
+      setIsUpdatingKaryawan(false);
+    }
   };
 
-  const handleClearSessions = () => {
-    setSessions(sessions.filter(s => s.active));
-    setSessionsClearedModal(true);
+  // PERBAIKAN: Fungsi Toggle Status Karyawan & Sinkronisasi Data Angka "Terblokir"
+  const toggleStatusKaryawan = async (id, currentStatus) => {
+    // Paksa pastikan nilainya terbaca boolean murni (true/false) bukan string/angka
+    const isCurrentlyActive = currentStatus === true || currentStatus === 1;
+
+    // Optimistic UI Update (Reaksi Cepat di Layar)
+    setKaryawanList(prev => prev.map(k => 
+      k.id === id ? { ...k, is_active: !isCurrentlyActive } : k
+    ));
+
+    try {
+      const response = await axiosInstance.put(`/owner/karyawan/${id}/toggle`);
+      // Update state dengan hasil nyata yang dikembalikan oleh database MySQL
+      setKaryawanList(prev => prev.map(k => 
+        k.id === id ? response.data.data : k
+      ));
+      showToast('Status karyawan berhasil diubah.', 'success');
+    } catch (error) {
+      showToast("Gagal mengubah status karyawan.", 'error');
+      // Jika error, kembalikan ke status semula
+      setKaryawanList(prev => prev.map(k => 
+        k.id === id ? { ...k, is_active: isCurrentlyActive } : k
+      ));
+    }
   };
+
+  // FUNGSI BARU: Hapus Karyawan
+  const triggerDeleteKaryawan = (id) => {
+    setKaryawanToDelete(id);
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDeleteKaryawan = async () => {
+    if (!karyawanToDelete) return;
+    const id = karyawanToDelete;
+    setIsDeleteModalOpen(false);
+    setKaryawanToDelete(null);
+
+    const previousList = [...karyawanList];
+    setKaryawanList(karyawanList.filter(k => k.id !== id)); // Hapus dari UI
+
+    try {
+      await axiosInstance.delete(`/owner/karyawan/${id}`);
+      showToast('Karyawan berhasil dihapus.', 'success');
+    } catch (error) {
+      showToast('Gagal menghapus karyawan.', 'error');
+      setKaryawanList(previousList); // Kembalikan ke UI jika gagal
+    }
+  };
+
+  // --- FILTER & PERHITUNGAN KARYAWAN ---
+  const filteredKaryawan = karyawanList.filter(k => {
+    const matchSearch = k.name.toLowerCase().includes(searchKaryawan.toLowerCase()) || 
+                        k.email.toLowerCase().includes(searchKaryawan.toLowerCase());
+    const matchRole = roleFilter === 'Semua Jabatan' || k.role.toLowerCase() === roleFilter.toLowerCase();
+    const matchCabang = cabangFilter === 'Semua Cabang' || k.cabang?.nama_cabang === cabangFilter;
+    return matchSearch && matchRole && matchCabang;
+  });
+
+  const totalKaryawan = karyawanList.length;
+  // Memastikan bahwa data "1" dari MySQL dibaca sebagai aktif (true)
+  const activeKaryawan = karyawanList.filter(k => k.is_active === true || k.is_active === 1).length;
+  const blockedKaryawan = totalKaryawan - activeKaryawan;
+
+  const userInitials = user && user.name ? user.name.substring(0, 2).toUpperCase() : 'US';
+
+  if (isLoading) return <div className="p-8 text-center text-slate-500 animate-pulse font-medium">Memuat pengaturan...</div>;
 
   return (
-    <div className="animate-fadeIn max-w-6xl">
-      {/* Page Header */}
+    <div className="animate-fadeIn w-full pb-10">
+      {/* Header */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-1">Profil</h1>
-        <p className="text-sm text-gray-500">Kelola detail profil, keamanan akun, dan akses staf POS Anda.</p>
+        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Profil</h1>
+        <p className="text-sm text-slate-500 mt-1">Kelola detail profil, keamanan akun, dan akses staf POS Anda.</p>
       </div>
 
-      {/* Tabs Menu */}
-      <div className="flex border-b border-slate-100 mb-8 gap-6">
-        <button
-          onClick={() => setActiveTab('profil-saya')}
-          className={`pb-4 text-sm font-bold transition-all relative ${
-            activeTab === 'profil-saya' ? 'text-[#0052cc]' : 'text-slate-400 hover:text-slate-600'
-          }`}
-        >
-          Profil Saya
-          {activeTab === 'profil-saya' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0052cc] rounded-full" />}
-        </button>
-        <button
-          onClick={() => setActiveTab('keamanan')}
-          className={`pb-4 text-sm font-bold transition-all relative ${
-            activeTab === 'keamanan' ? 'text-[#0052cc]' : 'text-slate-400 hover:text-slate-600'
-          }`}
-        >
-          Keamanan Akun
-          {activeTab === 'keamanan' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0052cc] rounded-full" />}
-        </button>
-        <button
-          onClick={() => setActiveTab('kelola-karyawan')}
-          className={`pb-4 text-sm font-bold transition-all relative ${
-            activeTab === 'kelola-karyawan' ? 'text-[#0052cc]' : 'text-slate-400 hover:text-slate-600'
-          }`}
-        >
-          Kelola Karyawan
-          {activeTab === 'kelola-karyawan' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0052cc] rounded-full" />}
-        </button>
+      {/* Tabs Navigation */}
+      <div className="flex items-center gap-6 border-b border-slate-200 mb-8">
+        {[
+          { id: 'profil', label: 'Profil Saya' },
+          { id: 'keamanan', label: 'Keamanan Akun' },
+          { id: 'karyawan', label: 'Kelola Karyawan' }
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`pb-4 text-sm font-bold transition-all relative ${
+              activeTab === tab.id ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'
+            }`}
+          >
+            {tab.label}
+            {activeTab === tab.id && (
+              <span className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 rounded-t-full" />
+            )}
+          </button>
+        ))}
       </div>
 
-      {/* Tab Contents */}
-      {activeTab === 'profil-saya' && (
-        <div className="bg-white rounded-3xl border border-slate-100 p-8 shadow-sm grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Avatar Column */}
-          <div className="lg:col-span-4 flex flex-col items-center border-b lg:border-b-0 lg:border-r border-slate-100 pb-8 lg:pb-0 lg:pr-8">
-            <div className="relative group">
-              <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-slate-50 shadow-inner flex items-center justify-center bg-blue-600 text-white font-black text-3xl">
-                <img
-                  src="https://ui-avatars.com/api/?name=Nicky+Owner&background=2563eb&color=fff&bold=true&size=128"
-                  alt="Avatar Owner"
-                  className="w-full h-full object-cover"
-                />
+      {/* --- TAB CONTENT: PROFIL SAYA --- */}
+      {activeTab === 'profil' && (
+        <div className="bg-white rounded-3xl border border-slate-100 p-8 shadow-sm flex flex-col md:flex-row gap-12 items-start">
+          <div className="flex flex-col items-center gap-4 shrink-0 md:w-1/4">
+            <div className="relative">
+              <div className="w-32 h-32 rounded-full bg-blue-600 text-white flex items-center justify-center text-4xl font-black shadow-lg shadow-blue-200 border-4 border-white">
+                {userInitials}
               </div>
-              <button className="absolute bottom-0 right-0 bg-blue-600 hover:bg-blue-700 text-white p-2.5 rounded-full shadow-lg transition-transform hover:scale-105">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              </button>
             </div>
-            <h3 className="font-bold text-slate-800 text-lg mt-4">{firstName} {lastName}</h3>
-            <span className="text-xs font-semibold px-3 py-1 bg-blue-50 text-blue-600 rounded-full mt-1.5 uppercase tracking-wide">Owner</span>
+            <div className="text-center">
+              <h2 className="text-xl font-bold text-slate-800">{user?.name || 'Loading...'}</h2>
+              <span className="inline-block mt-1 bg-blue-50 text-blue-600 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest">
+                {user?.role || 'OWNER'}
+              </span>
+            </div>
           </div>
 
-          {/* Form Fields Column */}
-          <div className="lg:col-span-8 space-y-6">
-            <div className="grid grid-cols-2 gap-4">
+          <form onSubmit={handleUpdateProfile} className="flex-1 w-full space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Nama Depan</label>
-                <input
-                  type="text"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all"
-                />
+                <label className="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide">Nama Depan</label>
+                <input type="text" value={profileForm.firstName} onChange={(e) => setProfileForm({...profileForm, firstName: e.target.value})} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none" />
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Nama Belakang</label>
-                <input
-                  type="text"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all"
-                />
+                <label className="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide">Nama Belakang</label>
+                <input type="text" value={profileForm.lastName} onChange={(e) => setProfileForm({...profileForm, lastName: e.target.value})} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none" />
               </div>
             </div>
-
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Alamat Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all"
-              />
+              <label className="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide">Alamat Email</label>
+              <input type="email" value={profileForm.email} onChange={(e) => setProfileForm({...profileForm, email: e.target.value})} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide">Nomor Telepon</label>
+              <input type="text" value={profileForm.phone} onChange={(e) => setProfileForm({...profileForm, phone: e.target.value})} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none" />
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Nomor Telepon</label>
-              <input
-                type="text"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all"
-              />
-            </div>
-
-            {/* Aksi */}
-            <div className="flex justify-end gap-3 pt-6 border-t border-slate-50">
-              <button
-                onClick={() => {
-                  setFirstName('Nicky');
-                  setLastName('Owner');
-                  setEmail('nickyowner@gmail.com');
-                  setPhone('+62 821-2345-6789');
-                }}
-                className="px-6 py-3 border border-slate-200 hover:bg-slate-50 text-slate-600 text-sm font-bold rounded-xl transition-all"
-              >
-                Batal
-              </button>
-              <button
-                onClick={() => setProfileSuccessModal(true)}
-                className="px-6 py-3 bg-[#0052cc] hover:bg-[#0047b3] text-white text-sm font-bold rounded-xl transition-all shadow-md shadow-blue-100"
-              >
-                Simpan Perubahan
+            <div className="flex justify-end gap-3 pt-4">
+              <button type="submit" disabled={isSavingProfile} className="px-6 py-3 bg-[#0052cc] text-white text-sm font-bold rounded-xl hover:bg-[#0047b3] transition-colors shadow-md shadow-blue-100 disabled:opacity-50">
+                {isSavingProfile ? 'Menyimpan...' : 'Simpan Perubahan'}
               </button>
             </div>
-          </div>
+          </form>
         </div>
       )}
 
+      {/* --- TAB CONTENT: KEAMANAN AKUN --- */}
       {activeTab === 'keamanan' && (
-        <div className="space-y-6">
-          {/* Ganti Kata Sandi & Kekuatan */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Form password */}
-            <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-100 p-8 shadow-sm space-y-5">
-              <h3 className="text-base font-bold text-slate-800 mb-2">Ganti Kata Sandi</h3>
-              
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Kata Sandi Saat Ini</label>
-                <input
-                  type="password"
-                  value={currPassword}
-                  onChange={(e) => setCurrPassword(e.target.value)}
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Kata Sandi Baru</label>
-                <input
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Konfirmasi Kata Sandi Baru</label>
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all"
-                />
-              </div>
-
-              <div className="pt-2">
-                <button
-                  onClick={() => {
-                    if (newPassword && newPassword === confirmPassword) {
-                      setPasswordSuccessModal(true);
-                      setCurrPassword('');
-                      setNewPassword('');
-                      setConfirmPassword('');
-                    }
-                  }}
-                  className="px-6 py-3 bg-[#0052cc] hover:bg-[#0047b3] text-white text-sm font-bold rounded-xl transition-all shadow-md"
-                >
-                  Perbarui Kata Sandi
+        <div className="flex flex-col md:flex-row gap-6">
+          <form onSubmit={handleUpdatePassword} className="flex-1 bg-white rounded-3xl border border-slate-100 p-8 shadow-sm space-y-6">
+            <h3 className="text-lg font-bold text-slate-800 mb-6">Ganti Kata Sandi</h3>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide">Kata Sandi Saat Ini</label>
+              <div className="relative">
+                <input type={showCurrentPass ? "text" : "password"} value={passwordForm.current} onChange={(e) => setPasswordForm({...passwordForm, current: e.target.value})} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none pr-12" />
+                <button type="button" onClick={() => setShowCurrentPass(!showCurrentPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                  {showCurrentPass ? <HiEyeOff size={20} /> : <HiEye size={20} />}
                 </button>
               </div>
             </div>
-
-            {/* Kekuatan Password card panel */}
-            <div className="bg-white rounded-3xl border border-slate-100 p-8 shadow-sm flex flex-col justify-center items-center text-center">
-              <div className="w-14 h-14 rounded-full bg-green-50 border border-green-200 flex items-center justify-center text-green-500 mb-4 shadow-inner">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
-              </div>
-              <h4 className="text-sm font-bold text-slate-800 mb-1">Kekuatan Kata Sandi</h4>
-              <p className="text-xs text-slate-400 mb-4 leading-relaxed">Gunakan kombinasi simbol, angka, huruf besar dan kecil agar aman.</p>
-              <div className="flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-600 rounded-full text-xs font-bold border border-green-200">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                Sangat Kuat
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide">Kata Sandi Baru</label>
+              <div className="relative">
+                <input type={showNewPass ? "text" : "password"} value={passwordForm.new} onChange={(e) => setPasswordForm({...passwordForm, new: e.target.value})} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none pr-12" />
+                <button type="button" onClick={() => setShowNewPass(!showNewPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                  {showNewPass ? <HiEyeOff size={20} /> : <HiEye size={20} />}
+                </button>
               </div>
             </div>
-          </div>
-
-          {/* Sesi Aktivitas */}
-          <div className="bg-white rounded-3xl border border-slate-100 p-8 shadow-sm">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className="text-base font-bold text-slate-800">Daftar Masuk / Aktivitas Sesi</h3>
-                <p className="text-xs text-slate-400 mt-0.5">Sesi aktif login yang saat ini terhubung ke akun Owner Anda.</p>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide">Konfirmasi Kata Sandi Baru</label>
+              <div className="relative">
+                <input type={showConfirmPass ? "text" : "password"} value={passwordForm.confirm} onChange={(e) => setPasswordForm({...passwordForm, confirm: e.target.value})} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none pr-12" />
+                <button type="button" onClick={() => setShowConfirmPass(!showConfirmPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                  {showConfirmPass ? <HiEyeOff size={20} /> : <HiEye size={20} />}
+                </button>
               </div>
-              <button
-                onClick={handleClearSessions}
-                className="px-4 py-2 border border-red-200 text-red-600 hover:bg-red-50 text-xs font-bold rounded-xl transition-all"
-              >
-                Keluar dari Semua Sesi Lain
+            </div>
+            <div className="pt-2">
+              <button type="submit" disabled={isSavingPassword || !passwordForm.new} className="px-6 py-3 bg-[#0052cc] text-white text-sm font-bold rounded-xl hover:bg-[#0047b3] transition-colors shadow-md disabled:opacity-50">
+                Perbarui Kata Sandi
               </button>
             </div>
+          </form>
 
-            <div className="space-y-4 divide-y divide-slate-50">
-              {sessions.map((sess) => (
-                <div key={sess.id} className="flex items-center justify-between pt-4 first:pt-0">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-500">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                      </svg>
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-slate-800">{sess.device}</p>
-                      <p className="text-xs text-slate-400 mt-0.5">{sess.location} • {sess.time}</p>
-                    </div>
-                  </div>
-                  {sess.active ? (
-                    <span className="flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-600 border border-green-200 rounded-full text-[10px] font-bold">
-                      <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                      Sesi Aktif
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-1.5 px-3 py-1 bg-slate-50 text-slate-400 border border-slate-200 rounded-full text-[10px] font-bold">
-                      Selesai
-                    </span>
-                  )}
-                </div>
-              ))}
+          <div className="md:w-1/3 bg-white rounded-3xl border border-slate-100 p-8 shadow-sm flex flex-col items-center justify-center text-center">
+            <div className={`w-16 h-16 rounded-full ${passStrength.bgColor} border ${passStrength.borderColor} flex items-center justify-center ${passStrength.textColor} mb-4 shadow-inner transition-colors duration-300`}>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
             </div>
+            <h4 className="text-base font-bold text-slate-800 mb-2">Kekuatan Kata Sandi</h4>
+            <p className="text-xs text-slate-500 leading-relaxed mb-6">Gunakan kombinasi simbol, angka, huruf besar dan kecil agar aman.</p>
+            <span className={`inline-flex items-center gap-1.5 ${passStrength.bgColor} ${passStrength.textColor} border ${passStrength.borderColor} px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-colors duration-300`}>
+              <span className={`w-2 h-2 rounded-full ${passStrength.dotColor}`} />
+              {passStrength.label}
+            </span>
           </div>
         </div>
       )}
 
-      {activeTab === 'kelola-karyawan' && (
+      {/* --- TAB CONTENT: KARYAWAN --- */}
+      {activeTab === 'karyawan' && (
         <div className="space-y-6">
-          {/* Stats Cards */}
+          {/* Stats */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white rounded-3xl border border-slate-100 p-6 flex items-center gap-4 shadow-sm">
-              <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600 shrink-0">
+            <div className="bg-white rounded-3xl border border-slate-100 p-6 flex items-center gap-5 shadow-sm">
+              <div className="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                 </svg>
               </div>
-              <div>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total Karyawan</p>
-                <p className="text-2xl font-black text-slate-800">12 Orang</p>
-              </div>
+              <div><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Karyawan</p><p className="text-2xl font-black text-slate-800">{totalKaryawan} Orang</p></div>
             </div>
-
-            <div className="bg-white rounded-3xl border border-slate-100 p-6 flex items-center gap-4 shadow-sm">
-              <div className="w-14 h-14 rounded-2xl bg-green-50 flex items-center justify-center text-green-600 shrink-0">
+            <div className="bg-white rounded-3xl border border-slate-100 p-6 flex items-center gap-5 shadow-sm">
+              <div className="w-14 h-14 rounded-2xl bg-green-50 text-green-600 flex items-center justify-center shrink-0">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <div>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Sedang Shift</p>
-                <p className="text-2xl font-black text-green-600">4 Orang</p>
-              </div>
+              <div><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Karyawan Aktif</p><p className="text-2xl font-black text-green-600">{activeKaryawan} Orang</p></div>
             </div>
-
-            <div className="bg-white rounded-3xl border border-slate-100 p-6 flex items-center gap-4 shadow-sm">
-              <div className="w-14 h-14 rounded-2xl bg-red-50 flex items-center justify-center text-red-600 shrink-0">
+            <div className="bg-white rounded-3xl border border-slate-100 p-6 flex items-center gap-5 shadow-sm">
+              <div className="w-14 h-14 rounded-2xl bg-red-50 text-red-500 flex items-center justify-center shrink-0">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
                 </svg>
               </div>
-              <div>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Terblokir</p>
-                <p className="text-2xl font-black text-red-600">1 Orang</p>
-              </div>
+              <div><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Terblokir</p><p className="text-2xl font-black text-red-600">{blockedKaryawan} Orang</p></div>
             </div>
           </div>
 
-          {/* Filter, Search & Add Row */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex flex-1 flex-col md:flex-row gap-3">
-              <div className="relative flex-1">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </span>
-                <input
-                  type="text"
-                  placeholder="Cari Karyawan..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-11 pr-4 py-3 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition-all bg-white"
-                />
-              </div>
-
-              <select
-                value={selectedRole}
-                onChange={(e) => setSelectedRole(e.target.value)}
-                className="px-4 py-3 border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 bg-white focus:outline-none"
-              >
-                <option value="Semua Jabatan">Semua Jabatan</option>
-                <option value="Kasir">Kasir</option>
-                <option value="Supervisor">Supervisor</option>
-                <option value="Gudang">Gudang</option>
-              </select>
-
-              <select
-                value={selectedBranch}
-                onChange={(e) => setSelectedBranch(e.target.value)}
-                className="px-4 py-3 border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 bg-white focus:outline-none"
-              >
-                <option value="Semua Cabang">Semua Cabang</option>
-                <option value="Cabang Utama">Cabang Utama</option>
-                <option value="Cabang Depok">Cabang Depok</option>
-                <option value="Cabang Kelapa Gading">Cabang Kelapa Gading</option>
-                <option value="Cabang Bekasi">Cabang Bekasi</option>
-              </select>
-            </div>
-
-            <button
-              onClick={() => setShowAddEmpModal(true)}
-              className="flex items-center justify-center gap-2 px-5 py-3 bg-[#0052cc] text-white text-sm font-bold rounded-2xl hover:bg-[#0047b3] transition-all shadow-md shrink-0"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          {/* Filters & Actions */}
+          <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+            <div className="relative flex-1 w-full">
+              <svg xmlns="http://www.w3.org/2000/svg" className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
-              Tambah Karyawan Baru
-            </button>
+              <input type="text" placeholder="Cari Karyawan..." value={searchKaryawan} onChange={(e) => setSearchKaryawan(e.target.value)} className="w-full pl-11 pr-4 py-3 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-100 outline-none" />
+            </div>
+            
+            <div className="flex gap-3 w-full md:w-auto">
+              <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="px-4 py-3 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-100 outline-none bg-white">
+                <option value="Semua Jabatan">Semua Jabatan</option>
+                <option value="Admin">Admin</option>
+                <option value="Kasir">Kasir</option>
+              </select>
+              <select value={cabangFilter} onChange={(e) => setCabangFilter(e.target.value)} className="px-4 py-3 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-100 outline-none bg-white">
+                <option value="Semua Cabang">Semua Cabang</option>
+                {cabangList.map(c => <option key={c.id} value={c.nama_cabang}>{c.nama_cabang}</option>)}
+              </select>
+              <button onClick={() => setShowAddKaryawan(true)} className="flex items-center gap-2 px-5 py-3 bg-[#0052cc] text-white text-sm font-bold rounded-xl hover:bg-[#0047b3] transition-colors whitespace-nowrap shadow-md">
+                + Tambah Karyawan
+              </button>
+            </div>
           </div>
 
-          {/* Employees Table */}
+          {/* Table */}
           <div className="bg-white rounded-3xl border border-slate-100 overflow-hidden shadow-sm">
-            <table className="w-full border-collapse text-left">
+            <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-100 text-slate-400 uppercase text-[10px] font-black tracking-wider">
+                <tr className="bg-slate-50 border-b border-slate-100 text-slate-400 text-[10px] font-black uppercase tracking-widest">
                   <th className="px-6 py-4">Nama</th>
                   <th className="px-6 py-4">Jabatan</th>
                   <th className="px-6 py-4">Cabang</th>
@@ -508,56 +464,66 @@ export default function Profil() {
                   <th className="px-6 py-4 text-center">Tindakan</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 text-sm">
-                {filteredEmployees.map((emp) => (
-                  <tr key={emp.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <img src={emp.avatar} alt={emp.name} className="w-10 h-10 rounded-full border border-slate-100 object-cover" />
-                        <div>
-                          <p className="font-bold text-slate-800 text-sm">{emp.name}</p>
-                          <span className="text-[10px] font-semibold text-slate-400">{emp.email} • {emp.phone}</span>
-                        </div>
+              <tbody className="divide-y divide-slate-50">
+                {filteredKaryawan.length > 0 ? filteredKaryawan.map(k => (
+                  <tr key={k.id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-6 py-4 flex items-center gap-4">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0 ${k.role === 'admin' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600'}`}>
+                        {k.name.substring(0,2).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-slate-800">{k.name}</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">{k.email} &bull; {k.phone || '-'}</p>
                       </div>
                     </td>
-                    <td className="px-6 py-4 font-semibold text-slate-600">{emp.role}</td>
-                    <td className="px-6 py-4 text-slate-500">{emp.branch}</td>
+                    <td className="px-6 py-4 text-sm font-semibold text-slate-700 capitalize">{k.role}</td>
+                    <td className="px-6 py-4 text-sm text-slate-600">{k.cabang?.nama_cabang || '-'}</td>
                     <td className="px-6 py-4 text-center">
-                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${
-                        emp.status === 'Aktif'
-                          ? 'bg-green-50 text-green-600 border-green-200'
-                          : 'bg-red-50 text-red-500 border-red-200'
-                      }`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${emp.status === 'Aktif' ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
-                        {emp.status}
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${k.is_active ? 'bg-green-50 text-green-600 border border-green-100' : 'bg-red-50 text-red-600 border border-red-100'}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${k.is_active ? 'bg-green-500' : 'bg-red-500'}`} />
+                        {k.is_active ? 'Aktif' : 'Terblokir'}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <button
-                          onClick={() => triggerResetPassword(emp)}
-                          title="Reset Kata Sandi"
-                          className="w-8 h-8 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 flex items-center justify-center transition-all"
+                      <div className="flex items-center justify-center gap-2">
+                        {/* TOMBOL EDIT */}
+                        <button 
+                          onClick={() => handleOpenEdit(k)} 
+                          title="Edit Data"
+                          className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-all shadow-sm border border-blue-100"
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 7a2 2 0 012 2m-2 4a5 5 0 0110 0v2a2 2 0 01-2 2H5a2 2 0 01-2-2v-2a5 5 0 0110 0M10 17v-3a2 2 0 114 0v3m-4 0h4" />
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                           </svg>
                         </button>
-                        <button
-                          onClick={() => triggerBlockToggle(emp)}
-                          title={emp.status === 'Aktif' ? 'Blokir Akses' : 'Buka Akses'}
-                          className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
-                            emp.status === 'Aktif'
-                              ? 'text-slate-400 hover:text-red-500 hover:bg-red-50'
-                              : 'text-slate-400 hover:text-green-600 hover:bg-green-50'
+
+                        {/* TOMBOL HAPUS */}
+                        <button 
+                          onClick={() => triggerDeleteKaryawan(k.id)} 
+                          title="Hapus Karyawan"
+                          className="w-8 h-8 rounded-xl bg-red-50 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all shadow-sm border border-red-100"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                        
+                        {/* TOMBOL KUNCI/BLOKIR */}
+                        <button 
+                          onClick={() => toggleStatusKaryawan(k.id, k.is_active)} 
+                          title={k.is_active ? "Blokir Akses" : "Buka Akses"}
+                          className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all shadow-sm border ${
+                            k.is_active 
+                              ? 'bg-amber-50 text-amber-600 border-amber-100 hover:bg-amber-500 hover:text-white' 
+                              : 'bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-500 hover:text-white'
                           }`}
                         >
-                          {emp.status === 'Aktif' ? (
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          {k.is_active ? (
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                               <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                             </svg>
                           ) : (
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                               <path strokeLinecap="round" strokeLinejoin="round" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
                             </svg>
                           )}
@@ -565,292 +531,148 @@ export default function Profil() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                )) : (
+                  <tr><td colSpan="5" className="px-6 py-12 text-center text-slate-400 text-sm">Tidak ada data karyawan ditemukan.</td></tr>
+                )}
               </tbody>
             </table>
           </div>
         </div>
       )}
 
-      {/* Modal: Profil Saya Sukses */}
-      {profileSuccessModal && (
+      {/* --- MODAL TAMBAH KARYAWAN --- */}
+      {showAddKaryawan && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-[32px] w-full max-w-md shadow-2xl p-8 text-center border border-slate-100 flex flex-col items-center animate-scaleIn">
-            <div className="w-14 h-14 rounded-full bg-green-50 border border-green-200 flex items-center justify-center text-green-500 mb-4 shadow-inner">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-bold text-slate-800 mb-2">Perubahan Berhasil Disimpan</h3>
-            <p className="text-xs text-slate-500 leading-relaxed mb-6 max-w-xs">Detail profil Anda telah berhasil diperbarui.</p>
-            <button
-              onClick={() => setProfileSuccessModal(false)}
-              className="w-full bg-[#0052cc] hover:bg-[#0047b3] text-white text-xs font-black py-3.5 rounded-2xl shadow-lg transition-colors"
-            >
-              Selesai
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Modal: Password Sukses */}
-      {passwordSuccessModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-[32px] w-full max-w-md shadow-2xl p-8 text-center border border-slate-100 flex flex-col items-center animate-scaleIn">
-            <div className="w-14 h-14 rounded-full bg-green-50 border border-green-200 flex items-center justify-center text-green-500 mb-4 shadow-inner">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-bold text-slate-800 mb-2">Kata Sandi Diperbarui</h3>
-            <p className="text-xs text-slate-500 leading-relaxed mb-6 max-w-xs">Kata sandi akun Owner Anda berhasil diperbarui. Silakan gunakan sandi baru untuk masuk selanjutnya.</p>
-            <button
-              onClick={() => setPasswordSuccessModal(false)}
-              className="w-full bg-[#0052cc] hover:bg-[#0047b3] text-white text-xs font-black py-3.5 rounded-2xl shadow-lg transition-colors"
-            >
-              Selesai
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Modal: Sesi Dikeluarkan Sukses */}
-      {sessionsClearedModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-[32px] w-full max-w-md shadow-2xl p-8 text-center border border-slate-100 flex flex-col items-center animate-scaleIn">
-            <div className="w-14 h-14 rounded-full bg-green-50 border border-green-200 flex items-center justify-center text-green-500 mb-4 shadow-inner">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-bold text-slate-800 mb-2">Sesi Lain Dikeluarkan</h3>
-            <p className="text-xs text-slate-500 leading-relaxed mb-6 max-w-xs">Semua sesi masuk perangkat lain telah dikeluarkan dengan sukses demi keamanan akun.</p>
-            <button
-              onClick={() => setSessionsClearedModal(false)}
-              className="w-full bg-[#0052cc] hover:bg-[#0047b3] text-white text-xs font-black py-3.5 rounded-2xl shadow-lg transition-colors"
-            >
-              Selesai
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Modal: Tambah Karyawan Baru */}
-      {showAddEmpModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <form
-            onSubmit={handleAddEmployee}
-            className="bg-white rounded-[32px] w-full max-w-lg shadow-2xl overflow-hidden border border-slate-100 flex flex-col animate-scaleIn"
-          >
+          <form onSubmit={handleAddKaryawan} className="bg-white rounded-[32px] w-full max-w-lg shadow-2xl overflow-hidden animate-scaleIn">
             <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between">
-              <h3 className="text-base font-bold text-slate-800">Tambah Karyawan Baru</h3>
-              <button
-                type="button"
-                onClick={() => setShowAddEmpModal(false)}
-                className="text-slate-400 hover:text-slate-600 transition-colors"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+              <h3 className="text-lg font-bold text-slate-800">Tambah Karyawan Baru</h3>
+              <button type="button" onClick={() => setShowAddKaryawan(false)} className="text-slate-400 hover:text-slate-600"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg></button>
             </div>
-
-            <div className="px-8 py-6 space-y-4 overflow-y-auto max-h-[70vh]">
+            <div className="px-8 py-6 space-y-4 max-h-[60vh] overflow-y-auto">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Nama Lengkap *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Nama Lengkap Staf"
-                  value={empName}
-                  onChange={(e) => setEmpName(e.target.value)}
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all"
-                />
+                <label className="block text-xs font-bold text-slate-700 mb-1">Nama Lengkap</label>
+                <input type="text" required value={newKaryawan.name} onChange={e=>setNewKaryawan({...newKaryawan, name: e.target.value})} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-100 outline-none" />
               </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Email *</label>
-                <input
-                  type="email"
-                  required
-                  placeholder="staf@nickyfrozen.com"
-                  value={empEmail}
-                  onChange={(e) => setEmpEmail(e.target.value)}
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Nomor Telepon</label>
-                <input
-                  type="text"
-                  placeholder="+62 8xx-xxxx-xxxx"
-                  value={empPhone}
-                  onChange={(e) => setEmpPhone(e.target.value)}
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all"
-                />
-              </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Jabatan *</label>
-                  <select
-                    value={empRole}
-                    onChange={(e) => setEmpRole(e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 bg-white focus:outline-none"
-                  >
-                    <option value="Kasir">Kasir</option>
-                    <option value="Supervisor">Supervisor</option>
-                    <option value="Gudang">Gudang</option>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Email</label>
+                  <input type="email" required value={newKaryawan.email} onChange={e=>setNewKaryawan({...newKaryawan, email: e.target.value})} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-100 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">No. HP (Angka)</label>
+                  <input type="number" required value={newKaryawan.phone} onChange={e=>setNewKaryawan({...newKaryawan, phone: e.target.value})} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-100 outline-none" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Jabatan</label>
+                  <select value={newKaryawan.role} onChange={e=>setNewKaryawan({...newKaryawan, role: e.target.value})} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none">
+                    <option value="kasir">Kasir</option>
+                    <option value="admin">Admin</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Cabang Bertugas *</label>
-                  <select
-                    value={empBranch}
-                    onChange={(e) => setEmpBranch(e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 bg-white focus:outline-none"
-                  >
-                    <option value="Cabang Utama">Cabang Utama</option>
-                    <option value="Cabang Kelapa Gading">Cabang Kelapa Gading</option>
-                    <option value="Cabang Depok">Cabang Depok</option>
-                    <option value="Cabang Bekasi">Cabang Bekasi</option>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Cabang Penempatan</label>
+                  <select required value={newKaryawan.cabang_id} onChange={e=>setNewKaryawan({...newKaryawan, cabang_id: e.target.value})} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none">
+                    <option value="">Pilih Cabang</option>
+                    {cabangList.map(c => <option key={c.id} value={c.id}>{c.nama_cabang}</option>)}
                   </select>
                 </div>
               </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Kata Sandi Awal</label>
+                <input type="text" required value={newKaryawan.password} onChange={e=>setNewKaryawan({...newKaryawan, password: e.target.value})} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-100 outline-none" placeholder="Minimal 6 karakter" />
+              </div>
             </div>
+            <div className="px-8 py-5 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
+              <button type="button" onClick={() => setShowAddKaryawan(false)} className="px-5 py-2.5 border border-slate-200 text-slate-600 text-xs font-bold rounded-xl hover:bg-white transition-all">Batal</button>
+              <button type="submit" className="px-5 py-2.5 bg-[#0052cc] text-white text-xs font-bold rounded-xl hover:bg-[#0047b3] shadow-md transition-all">Simpan Karyawan</button>
+            </div>
+          </form>
+        </div>
+      )}
 
-            <div className="px-8 py-5 border-t border-slate-100 bg-slate-50 flex items-center justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setShowAddEmpModal(false)}
-                className="px-5 py-2.5 border border-slate-200 hover:bg-white text-slate-600 text-xs font-bold rounded-xl transition-all"
-              >
-                Batal
-              </button>
-              <button
-                type="submit"
-                className="px-5 py-2.5 bg-[#0052cc] hover:bg-[#0047b3] text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-blue-100"
-              >
-                Simpan Karyawan
+      {/* --- MODAL EDIT KARYAWAN --- */}
+      {showEditKaryawan && editKaryawanData && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <form onSubmit={handleUpdateKaryawanSubmit} className="bg-white rounded-[32px] w-full max-w-lg shadow-2xl overflow-hidden animate-scaleIn">
+            <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-blue-50/50">
+              <h3 className="text-lg font-bold text-[#0B3B91]">Edit Data Karyawan</h3>
+              <button type="button" onClick={() => setShowEditKaryawan(false)} className="text-slate-400 hover:text-slate-600"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg></button>
+            </div>
+            <div className="px-8 py-6 space-y-4 max-h-[60vh] overflow-y-auto">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Nama Lengkap</label>
+                <input type="text" required value={editKaryawanData.name} onChange={e=>setEditKaryawanData({...editKaryawanData, name: e.target.value})} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-100 outline-none" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Email</label>
+                  <input type="email" required value={editKaryawanData.email} onChange={e=>setEditKaryawanData({...editKaryawanData, email: e.target.value})} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-100 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">No. HP (Angka)</label>
+                  <input type="number" required value={editKaryawanData.phone} onChange={e=>setEditKaryawanData({...editKaryawanData, phone: e.target.value})} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-100 outline-none" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Jabatan</label>
+                  <select value={editKaryawanData.role} onChange={e=>setEditKaryawanData({...editKaryawanData, role: e.target.value})} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none">
+                    <option value="kasir">Kasir</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Cabang Penempatan</label>
+                  <select required value={editKaryawanData.cabang_id} onChange={e=>setEditKaryawanData({...editKaryawanData, cabang_id: e.target.value})} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none">
+                    {cabangList.map(c => <option key={c.id} value={c.id}>{c.nama_cabang}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Kata Sandi (Opsional)</label>
+                <input type="text" value={editKaryawanData.password} onChange={e=>setEditKaryawanData({...editKaryawanData, password: e.target.value})} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-100 outline-none placeholder-slate-300" placeholder="Kosongkan jika tidak ingin diubah" />
+              </div>
+            </div>
+            <div className="px-8 py-5 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
+              <button type="button" onClick={() => setShowEditKaryawan(false)} className="px-5 py-2.5 border border-slate-200 text-slate-600 text-xs font-bold rounded-xl hover:bg-white transition-all">Batal</button>
+              <button type="submit" disabled={isUpdatingKaryawan} className="px-5 py-2.5 bg-[#0B3B91] text-white text-xs font-bold rounded-xl hover:bg-blue-900 shadow-md transition-all disabled:opacity-50">
+                {isUpdatingKaryawan ? 'Menyimpan...' : 'Simpan Perubahan'}
               </button>
             </div>
           </form>
         </div>
       )}
 
-      {/* Modal: Tambah Karyawan Sukses */}
-      {showAddEmpSuccess && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-[32px] w-full max-w-md shadow-2xl p-8 text-center border border-slate-100 flex flex-col items-center animate-scaleIn">
-            <div className="w-14 h-14 rounded-full bg-green-50 border border-green-200 flex items-center justify-center text-green-500 mb-4 shadow-inner">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-bold text-slate-800 mb-2">Karyawan Berhasil Ditambahkan!</h3>
-            <p className="text-xs text-slate-500 leading-relaxed mb-6 max-w-xs">Data karyawan baru telah berhasil disimpan ke dalam sistem.</p>
-            <button
-              onClick={() => setShowAddEmpSuccess(false)}
-              className="w-full bg-[#0052cc] hover:bg-[#0047b3] text-white text-xs font-black py-3.5 rounded-2xl shadow-lg transition-colors"
-            >
-              Selesai
-            </button>
-          </div>
+      {/* Warning Modal Delete */}
+      <WarningModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        title="Hapus Karyawan"
+        description="Peringatan: Anda yakin ingin menghapus akun karyawan ini secara permanen?"
+        buttonText="Ya, Hapus"
+        onConfirm={confirmDeleteKaryawan}
+      />
+
+      {/* --- TOAST NOTIFICATION --- */}
+      {toastMessage && (
+        <div className={`fixed top-6 right-6 text-white text-xs font-bold px-4 py-3 rounded-2xl shadow-xl z-[100] flex items-center gap-2 border animate-bounce ${
+          toastType === 'success' ? 'bg-green-500 border-green-400' : 'bg-red-500 border-red-400'
+        }`}>
+          {toastType === 'success' ? (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          )}
+          {toastMessage}
         </div>
       )}
 
-      {/* Modal: Reset Kata Sandi Confirm */}
-      {showResetPwModal && selectedEmp && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-[32px] w-full max-w-md shadow-2xl p-8 border border-slate-100 flex flex-col animate-scaleIn">
-            <h3 className="text-lg font-bold text-slate-800 mb-2">Reset Kata Sandi</h3>
-            <p className="text-xs text-slate-500 leading-relaxed mb-5">
-              Apakah Anda yakin ingin mereset kata sandi staf <strong>{selectedEmp.name}</strong>? Kata sandi baru akan dibuat secara otomatis oleh sistem.
-            </p>
-            <div className="flex items-center justify-end gap-3 mt-4">
-              <button
-                type="button"
-                onClick={() => setShowResetPwModal(false)}
-                className="px-5 py-2.5 border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-bold rounded-xl transition-all"
-              >
-                Batal
-              </button>
-              <button
-                type="button"
-                onClick={handleResetPassword}
-                className="px-5 py-2.5 bg-[#0052cc] hover:bg-[#0047b3] text-white text-xs font-bold rounded-xl transition-all shadow-md"
-              >
-                Ya, Reset
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal: Kata Sandi Berhasil Dibuat Ulang */}
-      {showResetPwSuccess && selectedEmp && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-[32px] w-full max-w-md shadow-2xl p-8 text-center border border-slate-100 flex flex-col items-center animate-scaleIn">
-            <div className="w-14 h-14 rounded-full bg-green-50 border border-green-200 flex items-center justify-center text-green-500 mb-4 shadow-inner animate-pulse">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-bold text-slate-800 mb-2">Kata Sandi Berhasil Dibuat Ulang</h3>
-            <p className="text-xs text-slate-500 leading-relaxed mb-4 max-w-xs">
-              Kata sandi baru untuk staf <strong>{selectedEmp.name}</strong> telah dibuat. Mohon salin dan berikan kepada yang bersangkutan:
-            </p>
-            <div className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 mb-6 font-mono font-bold text-lg text-slate-800 select-all cursor-pointer hover:bg-slate-100 transition-colors">
-              {generatedPw}
-            </div>
-            <button
-              onClick={() => {
-                setShowResetPwSuccess(false);
-                setSelectedEmp(null);
-              }}
-              className="w-full bg-[#0052cc] hover:bg-[#0047b3] text-white text-xs font-black py-3.5 rounded-2xl shadow-lg transition-colors"
-            >
-              Selesai
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Modal: Blokir Confirm */}
-      {showBlockConfirm && selectedEmp && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-[32px] w-full max-w-md shadow-2xl p-8 border border-slate-100 flex flex-col animate-scaleIn">
-            <h3 className="text-lg font-bold text-slate-800 mb-2">
-              {selectedEmp.status === 'Aktif' ? 'Blokir Akses Staf?' : 'Buka Akses Staf?'}
-            </h3>
-            <p className="text-xs text-slate-500 leading-relaxed mb-5">
-              Apakah Anda yakin ingin {selectedEmp.status === 'Aktif' ? 'memblokir' : 'membuka kembali'} akses staf <strong>{selectedEmp.name}</strong> pada sistem POS Nicky Frozen?
-            </p>
-            <div className="flex items-center justify-end gap-3 mt-4">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowBlockConfirm(false);
-                  setSelectedEmp(null);
-                }}
-                className="px-5 py-2.5 border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-bold rounded-xl transition-all"
-              >
-                Batal
-              </button>
-              <button
-                type="button"
-                onClick={handleBlockToggle}
-                className={`px-5 py-2.5 text-white text-xs font-bold rounded-xl transition-all shadow-md ${
-                  selectedEmp.status === 'Aktif' ? 'bg-red-500 hover:bg-red-600' : 'bg-[#0052cc] hover:bg-[#0047b3]'
-                }`}
-              >
-                {selectedEmp.status === 'Aktif' ? 'Ya, Blokir' : 'Ya, Buka Akses'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

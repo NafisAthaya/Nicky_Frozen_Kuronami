@@ -5,6 +5,7 @@ import {
   MdKeyboardArrowDown, 
   MdKeyboardArrowUp 
 } from 'react-icons/md';
+import { FaWhatsapp } from 'react-icons/fa';
 
 // Custom Accordion Component
 const FaqAccordion = ({ question, children }) => {
@@ -19,12 +20,14 @@ const FaqAccordion = ({ question, children }) => {
         <span className="font-bold text-[15px] text-[#111827]">
           {question}
         </span>
+
         {isOpen ? (
           <MdKeyboardArrowUp className="text-gray-500" size={20} />
         ) : (
           <MdKeyboardArrowDown className="text-gray-500" size={20} />
         )}
       </div>
+
       {isOpen && (
         <div className="px-4 pb-4 pt-1 text-[14px] text-gray-600 bg-[#f4f7fb] leading-relaxed">
           {children}
@@ -124,12 +127,7 @@ export default function Bantuan() {
             </p>
           </div>
           <button className="bg-white text-[#0A1A3A] hover:bg-gray-50 font-bold text-sm px-5 py-3 rounded-xl flex items-center gap-2 shadow-md transition-all">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
-              <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
-              <path d="M9 12h.01"></path>
-              <path d="M12 12h.01"></path>
-              <path d="M15 12h.01"></path>
-            </svg>
+            <FaWhatsapp className="text-green-500" size={18} />
             Hubungi Admin via WhatsApp
           </button>
         </div>
@@ -144,4 +142,4 @@ export default function Bantuan() {
       </div>
     </div>
   );
-}
+};

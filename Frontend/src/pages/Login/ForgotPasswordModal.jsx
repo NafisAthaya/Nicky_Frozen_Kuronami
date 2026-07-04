@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import toast from 'react-hot-toast';
 import { Mail, RotateCcw, Check, Info, ArrowLeft } from 'lucide-react';
 
 export default function ForgotPasswordModal({ isOpen, onClose }) {
@@ -31,7 +32,7 @@ export default function ForgotPasswordModal({ isOpen, onClose }) {
     }
   } catch (error) {
     console.error(error);
-    alert('Gagal mengirim email');
+    toast.error('Gagal mengirim email');
   }
 };
 

@@ -1,60 +1,71 @@
 import { useState, useEffect } from 'react';
 import { HiOutlineDocumentText, HiOutlinePrinter } from 'react-icons/hi';
 import PopupStruk from './PopupStruk';
+import axiosInstance from '../../api/axios';
 
-const timeFilters = [
-  'Semua Waktu',
-  '06:00 - 08:00',
-  '08:00 - 10:00',
-  '10:00 - 12:00',
-  '12:00 - 14:00',
-  '14:00 - 16:00',
-  '16:00 - 18:00',
-  '18:00 - 20:00',
-  '20:00 - 22:00',
-];
+// Dynamic filters will be generated inside the component
 
 export default function RiwayatTransaksi({ transactions }) {
   const [activeFilter, setActiveFilter] = useState('Semua Waktu');
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [transactionsData, setTransactionsData] = useState([]);
+
+  const shiftName = localStorage.getItem('shift') || '';
+  
+  let timeFilters = ['Semua Waktu'];
+  if (shiftName.includes('Shift 1')) {
+    timeFilters.push('06:00 - 07:00', '07:00 - 08:00', '08:00 - 09:00', '09:00 - 10:00');
+  } else if (shiftName.includes('Shift 2')) {
+    timeFilters.push('10:00 - 11:00', '11:00 - 12:00', '12:00 - 13:00', '13:00 - 14:00');
+  } else if (shiftName.includes('Shift 3')) {
+    timeFilters.push('14:00 - 15:00', '15:00 - 16:00', '16:00 - 17:00', '17:00 - 18:00');
+  } else if (shiftName.includes('Shift 4')) {
+    timeFilters.push('18:00 - 19:00', '19:00 - 20:00', '20:00 - 21:00', '21:00 - 22:00');
+  } else {
+    timeFilters = [
+      'Semua Waktu',
+      '06:00 - 08:00',
+      '08:00 - 10:00',
+      '10:00 - 12:00',
+      '12:00 - 14:00',
+      '14:00 - 16:00',
+      '16:00 - 18:00',
+      '18:00 - 20:00',
+      '20:00 - 22:00',
+    ];
+  }
+
   useEffect(() => {
-  fetch('http://127.0.0.1:8000/api/transaksi')
-    .then((res) => res.json())
-    .then((data) => {
-      const mapped = data.map((trx) => ({
-        id: trx.no_transaksi,
+    const loadData = () => {
+      axiosInstance.get('/kasir/transaksi')
+        .then((res) => {
+          const data = res.data.data || res.data;
+          const mapped = Array.isArray(data) ? data.map((trx) => ({
+            id: trx.no_transaksi,
+            time: new Date(trx.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+            items: trx.details.map((d) => `${d.qty}x ${d.produk?.nama_produk || 'Produk'}`).join(', '),
+            status: trx.status,
+            total: Number(trx.total_tagihan),
+            rawItems: trx.details.map((d) => ({
+              id: d.id,
+              name: d.produk?.nama_produk || 'Produk',
+              quantity: Number(d.qty),
+              price: Number(d.harga_satuan),
+            })),
+            subtotal: Number(trx.subtotal),
+            paymentMethod: trx.metode_pembayaran,
+          })) : [];
+          setTransactionsData(mapped);
+        })
+        .catch(console.error);
+    };
 
-        time: new Date(trx.created_at).toLocaleTimeString(
-          'id-ID',
-          {
-            hour: '2-digit',
-            minute: '2-digit',
-          }
-        ),
+    loadData();
 
-        items: trx.details
-      .map(
-        (d) =>
-          `${d.qty}x ${d.produk?.nama_produk || 'Produk'}`
-      )
-      .join(', '),
-
-        status: trx.status,
-
-        total: Number(trx.total_tagihan),
-
-        rawItems: trx.details,
-
-        subtotal: Number(trx.subtotal),
-
-        paymentMethod: trx.metode_pembayaran,
-      }));
-
-      setTransactionsData(mapped);
-    })
-    .catch(console.error);
-}, []);
+    const handleGlobalSync = () => loadData();
+    window.addEventListener('global-sync', handleGlobalSync);
+    return () => window.removeEventListener('global-sync', handleGlobalSync);
+  }, []);
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('id-ID', {
@@ -151,8 +162,11 @@ ${
               </div>
 
               <div className="flex justify-end min-w-[170px]">
-                <button className="btn-print" onClick={() => setSelectedTransaction(trx)}>
-                  <HiOutlinePrinter />
+                <button 
+                  className="flex items-center gap-2 px-4 py-2 border border-[#082B7A] text-[#082B7A] hover:bg-[#082B7A] hover:text-white rounded-xl text-sm font-semibold transition-colors" 
+                  onClick={() => setSelectedTransaction(trx)}
+                >
+                  <HiOutlinePrinter className="text-lg" />
                   Cetak Ulang Struk
                 </button>
               </div>

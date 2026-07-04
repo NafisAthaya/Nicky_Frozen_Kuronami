@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import { useNavigate, useOutletContext } from 'react-router-dom';
 import {
   MdSearch,
   MdAdd,
@@ -16,33 +17,38 @@ import WarningModal from '../../components/admin/WarningModal.jsx';
 
 export default function KategoriItem() {
   const navigate = useNavigate();
+  const { searchQuery } = useOutletContext(); // <--- UNIVERSAL SEARCH
 
   const [categories, setCategories] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
-  
+
   // State for modals
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
-  
+
   const [isAddEditModalOpen, setIsAddEditModalOpen] = useState(false);
   const [editCategoryData, setEditCategoryData] = useState(null);
 
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [deleteCategoryName, setDeleteCategoryName] = useState('');
+  const [deleteCategoryData, setDeleteCategoryData] = useState(null);
+
+  const loadData = async () => {
+    try {
+      const data = await fetchKategoris();
+      setCategories(data);
+    } catch (error) {
+      console.error("Gagal memuat kategori:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const data = await fetchKategoris();
-        setCategories(data);
-      } catch (error) {
-        console.error("Gagal memuat kategori:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
     loadData();
+
+    const handleGlobalSync = () => loadData();
+    window.addEventListener('global-sync', handleGlobalSync);
+    return () => window.removeEventListener('global-sync', handleGlobalSync);
   }, []);
 
   const filteredCategories = categories.filter((cat) =>
@@ -59,8 +65,8 @@ export default function KategoriItem() {
     setIsAddEditModalOpen(true);
   };
 
-  const handleHapusKategori = (catName) => {
-    setDeleteCategoryName(catName);
+  const handleHapusKategori = (cat) => {
+    setDeleteCategoryData(cat);
     setIsDeleteModalOpen(true);
   };
 
@@ -68,17 +74,26 @@ export default function KategoriItem() {
     setIsAddEditModalOpen(false);
     setSuccessMessage(editCategoryData ? 'Kategori berhasil diperbarui.' : 'Kategori baru Anda telah berhasil tersimpan.');
     setIsSuccessModalOpen(true);
+    loadData();
   };
 
-  const confirmDelete = () => {
-    setIsDeleteModalOpen(false);
-    setSuccessMessage(`Kategori "${deleteCategoryName}" berhasil dihapus.`);
-    setIsSuccessModalOpen(true);
+  const confirmDelete = async () => {
+    if (!deleteCategoryData) return;
+    try {
+      const { deleteKategori } = await import('../../services/adminApi');
+      await deleteKategori(deleteCategoryData.id);
+      setIsDeleteModalOpen(false);
+      setSuccessMessage(`Kategori "${deleteCategoryData.name}" berhasil dihapus.`);
+      setIsSuccessModalOpen(true);
+      loadData();
+    } catch (error) {
+      toast.error("Gagal menghapus kategori");
+    }
   };
 
   return (
     <div className="p-6 md:p-8 w-full relative">
-      
+
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6">
         <div>
@@ -97,18 +112,6 @@ export default function KategoriItem() {
           <MdAdd className="text-xl" />
           Tambah Kategori Baru
         </button>
-      </div>
-
-      {/* Search Bar */}
-      <div className="bg-white border border-gray-200 rounded-xl p-3 mb-6 flex items-center gap-3">
-        <MdSearch className="text-gray-400 text-2xl ml-2" />
-        <input
-          type="text"
-          placeholder="Cari nama kategori atau ID..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="flex-1 w-full text-sm outline-none bg-transparent"
-        />
       </div>
 
       {/* Table */}
@@ -153,30 +156,30 @@ export default function KategoriItem() {
                     <td className="px-6 py-4 text-gray-500 text-sm font-medium">
                       {idKategori}
                     </td>
-                    
+
                     <td className="px-6 py-4">
                       <span className="font-bold text-[#082B7A] text-lg">
                         {cat.name}
                       </span>
                     </td>
-                    
+
                     <td className="px-6 py-4">
                       <div className="inline-flex items-center px-3 py-1 bg-blue-50 text-blue-600 rounded-lg text-xs font-semibold">
                         {cat.product_count} Produk
                       </div>
                     </td>
-                    
+
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-center gap-3">
-                        <button 
+                        <button
                           onClick={() => handleEditKategori(cat)}
                           className="text-gray-400 hover:text-blue-600 transition-colors"
                           title="Edit"
                         >
                           <MdEdit size={22} />
                         </button>
-                        <button 
-                          onClick={() => handleHapusKategori(cat.name)}
+                        <button
+                          onClick={() => handleHapusKategori(cat)}
                           className="text-gray-400 hover:text-red-600 transition-colors"
                           title="Hapus"
                         >
@@ -196,7 +199,7 @@ export default function KategoriItem() {
           <span className="text-sm text-gray-500">
             Menampilkan 1-{filteredCategories.length} dari {filteredCategories.length} kategori
           </span>
-          
+
           <div className="flex items-center gap-2">
             <button className="w-8 h-8 flex items-center justify-center rounded-lg border text-gray-400 hover:bg-gray-50 transition-colors disabled:opacity-50" disabled>
               <MdChevronLeft size={20} />
@@ -220,7 +223,7 @@ export default function KategoriItem() {
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={confirmDelete}
         title="Hapus Kategori?"
-        description={`Apakah Anda yakin ingin menghapus kategori "${deleteCategoryName}"?`}
+        description={`Apakah Anda yakin ingin menghapus kategori "${deleteCategoryData?.name}"?`}
         buttonText="Hapus"
       />
 

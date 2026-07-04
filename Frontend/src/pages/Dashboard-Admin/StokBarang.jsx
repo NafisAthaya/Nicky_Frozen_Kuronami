@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useOutletContext } from 'react-router-dom';
 import {
   MdFilterList,
   MdAdd,
@@ -9,7 +9,7 @@ import {
 
 import { fetchProduks, deleteProduk, fetchKategoris } from '../../services/adminApi';
 import FilterModal from '../../components/admin/FilterModal';
-import TambahProdukModal from '../../components/admin/TambahProdukModal';
+import FormTambahProduk from '../../components/admin/FormTambahProduk';
 import SuccessModal from '../../components/admin/SuccessModal.jsx';
 import WarningModal from '../../components/admin/WarningModal';
 
@@ -54,6 +54,7 @@ function getProductEmoji(categoryNames = '') {
 
 export default function StokBarang() {
   const navigate = useNavigate();
+  const { searchQuery } = useOutletContext(); // <--- UNIVERSAL SEARCH
 
   const [products, setProducts] = useState([]);
   const [kategoris, setKategoris] = useState([]);
@@ -90,20 +91,38 @@ export default function StokBarang() {
 
   useEffect(() => {
     loadData();
+
+    const handleGlobalSync = () => loadData();
+    window.addEventListener('global-sync', handleGlobalSync);
+    return () => window.removeEventListener('global-sync', handleGlobalSync);
   }, []);
 
   const filteredProducts = useMemo(() => {
-    if (
-      activeFilter.pilihSemua ||
-      activeFilter.selectedCategoryNames.length === 0
-    ) {
-      return products;
+    let result = products;
+
+    // Apply Global Search
+    if (searchQuery) {
+      const lowerQuery = searchQuery.toLowerCase();
+      result = result.filter(
+        (p) =>
+          p.nama_produk.toLowerCase().includes(lowerQuery) ||
+          p.sku.toLowerCase().includes(lowerQuery) ||
+          p.kategori.toLowerCase().includes(lowerQuery)
+      );
     }
 
-    return products.filter((p) =>
-      activeFilter.selectedCategoryNames.includes(p.kategori)
-    );
-  }, [products, activeFilter]);
+    // Apply Category Filter
+    if (
+      !activeFilter.pilihSemua &&
+      activeFilter.selectedCategoryNames.length > 0
+    ) {
+      result = result.filter((p) =>
+        activeFilter.selectedCategoryNames.includes(p.kategori)
+      );
+    }
+
+    return result;
+  }, [products, activeFilter, searchQuery]);
 
   const handleApplyFilter = (filters) => {
     // Note: FilterModal needs to return selectedCategoryNames instead of IDs
@@ -198,20 +217,7 @@ export default function StokBarang() {
               )}
           </button>
 
-          <button
-            onClick={handleOpenTambah}
-            className="
-              flex items-center gap-2
-              px-4 h-10
-              bg-orange-500
-              hover:bg-orange-600
-              text-white
-              rounded-xl
-            "
-          >
-            <MdAdd />
-            Tambah Produk Baru
-          </button>
+
 
           <button
             onClick={() => navigate('/admin/pengajuan-stok')}
@@ -460,7 +466,7 @@ export default function StokBarang() {
         kategoris={kategoris}
       />
 
-      <TambahProdukModal
+      <FormTambahProduk
         isOpen={isTambahOpen}
         onClose={() => {
           setIsTambahOpen(false);

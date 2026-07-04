@@ -1,5 +1,4 @@
-const API_BASE = 'http://127.0.0.1:8000/api';
-
+import axiosInstance from '../api/axios';
 /**
  * Helper: get cabang_id from the logged-in user stored in localStorage
  */
@@ -15,6 +14,8 @@ function getCabangId() {
 /**
  * Helper: build query string with cabang_id
  */
+
+
 function withCabang(params = {}) {
   const cabangId = getCabangId();
   if (cabangId) {
@@ -31,9 +32,8 @@ export async function fetchDashboardStats(filters = {}) {
   if (cabangId) params.cabang_id = cabangId;
 
   const qs = new URLSearchParams(params).toString();
-  const res = await fetch(`${API_BASE}/admin/dashboard-stats${qs ? `?${qs}` : ''}`);
-  if (!res.ok) throw new Error('Gagal memuat statistik dashboard');
-  return res.json();
+  const res = await axiosInstance.get(`/admin/dashboard-stats${qs ? `?${qs}` : ''}`);
+  return res.data;
 }
 
 // ─── Produk CRUD ──────────────────────────────────────
@@ -44,41 +44,70 @@ export async function fetchProduks(filters = {}) {
   if (filters.kategori) params.kategori = filters.kategori;
 
   const qs = new URLSearchParams(params).toString();
-  const res = await fetch(`${API_BASE}/admin/produks${qs ? `?${qs}` : ''}`);
-  if (!res.ok) throw new Error('Gagal memuat produk');
-  return res.json();
+  const res = await axiosInstance.get(`/admin/produks${qs ? `?${qs}` : ''}`);
+  return res.data;
 }
 
 export async function createProduk(data) {
   const cabangId = getCabangId();
-  const res = await fetch(`${API_BASE}/admin/produks`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ...data, cabang_id: cabangId }),
-  });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.message || 'Gagal menambahkan produk');
-  return json;
+  
+  let options = { method: 'POST' };
+  
+  if (data instanceof FormData) {
+    if (cabangId) data.append('cabang_id', cabangId);
+    options.data = data;
+    options.headers = { 'Content-Type': 'multipart/form-data' };
+  } else {
+    options.headers = { 'Content-Type': 'application/json' };
+    options.data = { ...data, cabang_id: cabangId };
+  }
+
+  try {
+    const res = await axiosInstance({
+      method: options.method,
+      url: '/admin/produks',
+      data: options.data,
+      headers: options.headers
+    });
+    return res.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || 'Gagal menambahkan produk');
+  }
 }
 
 export async function updateProduk(id, data) {
-  const res = await fetch(`${API_BASE}/admin/produks/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.message || 'Gagal memperbarui produk');
-  return json;
+  let options = { method: 'POST' }; // Use POST for update with FormData (Laravel requires POST + _method=PUT)
+  
+  if (data instanceof FormData) {
+    data.append('_method', 'PUT'); // Laravel workaround for PUT requests with FormData
+    options.data = data;
+    options.headers = { 'Content-Type': 'multipart/form-data' };
+  } else {
+    options.method = 'PUT';
+    options.headers = { 'Content-Type': 'application/json' };
+    options.data = data;
+  }
+
+  try {
+    const res = await axiosInstance({
+      method: options.method,
+      url: `/admin/produks/${id}`,
+      data: options.data,
+      headers: options.headers
+    });
+    return res.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || 'Gagal memperbarui produk');
+  }
 }
 
 export async function deleteProduk(id) {
-  const res = await fetch(`${API_BASE}/admin/produks/${id}`, {
-    method: 'DELETE',
-  });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.message || 'Gagal menghapus produk');
-  return json;
+  try {
+    const res = await axiosInstance.delete(`/admin/produks/${id}`);
+    return res.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || 'Gagal menghapus produk');
+  }
 }
 
 // ─── Produk Batches (Barang Masuk) ────────────────────
@@ -89,36 +118,45 @@ export async function fetchBatches(limit = null) {
   if (limit) params.limit = limit;
 
   const qs = new URLSearchParams(params).toString();
-  const res = await fetch(`${API_BASE}/admin/produk-batches${qs ? `?${qs}` : ''}`);
-  if (!res.ok) throw new Error('Gagal memuat data barang masuk');
-  return res.json();
+  const res = await axiosInstance.get(`/admin/produk-batches${qs ? `?${qs}` : ''}`);
+  return res.data;
 }
 
 export async function createBatch(data) {
-  const res = await fetch(`${API_BASE}/admin/produk-batches`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.message || 'Gagal mencatat barang masuk');
-  return json;
+  try {
+    const res = await axiosInstance.post(`/admin/produk-batches`, data);
+    return res.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || 'Gagal mencatat barang masuk');
+  }
 }
 
 export async function updateBatch(id, data) {
-  const res = await fetch(`${API_BASE}/admin/produk-batches/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.message || 'Gagal memperbarui barang masuk');
-  return json;
+  try {
+    const res = await axiosInstance.put(`/admin/produk-batches/${id}`, data);
+    return res.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || 'Gagal memperbarui barang masuk');
+  }
 }
 
 // ─── Kategoris ────────────────────────────────────────
 export async function fetchKategoris() {
-  const res = await fetch(`${API_BASE}/admin/kategoris${withCabang()}`);
-  if (!res.ok) throw new Error('Gagal memuat kategori');
-  return res.json();
+  const res = await axiosInstance.get(`/admin/kategoris${withCabang()}`);
+  return res.data;
+}
+
+export async function addKategori(data) {
+  const res = await axiosInstance.post('/admin/kategoris', data);
+  return res.data;
+}
+
+export async function updateKategori(id, data) {
+  const res = await axiosInstance.put(`/admin/kategoris/${id}`, data);
+  return res.data;
+}
+
+export async function deleteKategori(id) {
+  const res = await axiosInstance.delete(`/admin/kategoris/${id}`);
+  return res.data;
 }

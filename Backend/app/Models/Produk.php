@@ -9,14 +9,14 @@ class Produk extends Model
     protected $table = 'produks';
 
     protected $fillable = [
+        'cabang_id',
         'sku',
         'nama_produk',
         'kategori',
+        'gambar',
         'harga_beli',
         'harga_jual',
         'stok_total',
-        'gambar',
-        'cabang_id'
     ];
 
     public function batches()

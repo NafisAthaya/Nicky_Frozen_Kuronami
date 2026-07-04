@@ -56,7 +56,7 @@ export default function ProdukTerlaris() {
   };
 
   return (
-    <div className="animate-fadeIn p-6 max-w-7xl mx-auto">
+    <div className="animate-fadeIn w-full pb-10">
       {/* Back & Title Header */}
       <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>

@@ -26,4 +26,9 @@ class DetailTransaksi extends Model
     {
         return $this->belongsTo(Produk::class);
     }
+
+    public function batch()
+    {
+        return $this->belongsTo(ProdukBatch::class, 'produk_batch_id');
+    }
 }

@@ -1,32 +1,111 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axiosInstance from '../../api/axios';
 import ownerProfile from '../../assets/OwnerProfile.png';
 
-export default function TopBar() {
+// Helper Format Waktu Relatif
+const getRelativeTime = (dateString) => {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffInSeconds = Math.floor((now - date) / 1000);
+
+  if (diffInSeconds < 60) return 'Baru saja';
+  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} menit yang lalu`;
+  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} jam yang lalu`;
+  return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+};
+
+// Helper Ikon dan Warna Notifikasi
+const getNotifStyle = (type) => {
+  switch (type) {
+    case 'danger':
+      return {
+        bg: 'bg-red-100 text-red-600',
+        icon: <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+      };
+    case 'warning':
+      return {
+        bg: 'bg-amber-100 text-amber-600',
+        icon: <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
+      };
+    case 'success':
+      return {
+        bg: 'bg-green-100 text-green-600',
+        icon: <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+      };
+    default: // info
+      return {
+        bg: 'bg-blue-100 text-blue-600',
+        icon: <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+      };
+  }
+};
+
+export default function TopBar({ searchQuery, onSearch }) {
   const [showNotifications, setShowNotifications] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncToast, setSyncToast] = useState(false);
+  const [notifications, setNotifications] = useState([]);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
-  // Ambil data user yang login dari localStorage
-  const user = (() => {
+  // State reaktif untuk data user
+  const [user, setUser] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem('user'));
     } catch {
       return null;
     }
-  })();
-
-  const userName = user?.name || 'Admin';
-  const userRole = user?.role || 'admin';
+  });
 
   useEffect(() => {
+    const handleStorageChange = () => {
+      try {
+        setUser(JSON.parse(localStorage.getItem('user')));
+      } catch {
+        setUser(null);
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  const userName = user?.name || 'Admin';
+  const userRole = 'Admin';
+
+  // Fetch Notifikasi dari Backend
+  const fetchNotifications = async () => {
+    try {
+      const response = await axiosInstance.get('/notifikasi');
+      setNotifications(response.data.data);
+      window.dispatchEvent(new CustomEvent('topbar-notifications-fetched', { detail: response.data.data }));
+    } catch (error) {
+      console.error("Gagal mengambil notifikasi topbar:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+
+    const interval = setInterval(() => {
+      fetchNotifications();
+    }, 30000);
+
+    const handleForceRefresh = () => fetchNotifications();
+    window.addEventListener('notifikasi-updated', handleForceRefresh);
+
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setShowNotifications(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('notifikasi-updated', handleForceRefresh);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, []);
 
   const handleNotificationClick = () => {
@@ -39,6 +118,7 @@ export default function TopBar() {
   };
 
   return (
+    <>
     <header className="topbar relative sticky top-0 z-40 h-20 bg-[#F6F7FB] border-b border-[#E5E7EB] flex items-center justify-between px-8">
       {/* Search */}
       <div className="flex items-center gap-3 flex-1 max-w-lg">
@@ -48,7 +128,9 @@ export default function TopBar() {
           </svg>
           <input
             type="text"
-            placeholder="Cari performa..."
+            value={searchQuery || ''}
+            onChange={onSearch}
+            placeholder="Cari (Universal)..."
             className="w-full pl-10 pr-4 py-3 text-sm bg-white border border-[#D9DCE7] rounded-2xl text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition-all"
           />
         </div>
@@ -57,14 +139,18 @@ export default function TopBar() {
       {/* Right Actions */}
       <div className="flex items-center gap-3 relative" ref={dropdownRef}>
         {/* Notification Bell */}
-        <button 
+        <button
           onClick={handleNotificationClick}
           className="relative w-11 h-11 flex items-center justify-center rounded-xl text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-all"
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
           </svg>
-          <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />
+          {notifications.some((n) => !n.is_read) && (
+            <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[20px] h-[20px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-[#F6F7FB] shadow-sm animate-bounce">
+              {notifications.filter(n => !n.is_read).length > 99 ? '99+' : notifications.filter(n => !n.is_read).length}
+            </span>
+          )}
         </button>
 
         {/* Dropdown Notifikasi */}
@@ -72,69 +158,72 @@ export default function TopBar() {
           <div className="absolute right-36 top-14 w-80 bg-white rounded-2xl border border-gray-100 shadow-2xl p-4 z-50 animate-fadeIn">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm font-bold text-gray-800">Notifikasi</span>
-              <button 
+              <button
                 onClick={handleViewAll}
                 className="text-xs font-semibold text-blue-600 hover:underline"
               >
-                Lihat
+                Lihat Semua
               </button>
             </div>
             <div className="h-px bg-gray-100 mb-3" />
             <div className="space-y-3 max-h-96 overflow-y-auto">
-              {/* Item 1 */}
-              <div className="flex gap-3 hover:bg-gray-50 p-2 rounded-xl transition-colors cursor-pointer" onClick={handleViewAll}>
-                <div className="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center shrink-0">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
+              {notifications.slice(0, 3).length > 0 ? notifications.slice(0, 3).map((notif) => {
+                const style = getNotifStyle(notif.type);
+                return (
+                  <div 
+                    key={notif.id} 
+                    className="flex gap-3 hover:bg-gray-50 p-2 rounded-xl transition-colors cursor-pointer" 
+                    onClick={async () => {
+                      try {
+                        await axiosInstance.patch(`/notifikasi/${notif.id}/read`);
+                        fetchNotifications();
+                        setShowNotifications(false);
+                        navigate('/admin/notifikasi');
+                      } catch (error) {
+                        console.error(error);
+                      }
+                    }}
+                  >
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${style.bg}`}>
+                      {style.icon}
+                    </div>
+                    <div className="text-left flex-1 min-w-0">
+                      <p className={`text-xs font-bold truncate ${!notif.is_read ? 'text-[#0A1A3C]' : 'text-gray-600'}`}>{notif.title}</p>
+                      <p className={`text-[10px] mt-0.5 leading-normal ${!notif.is_read ? 'text-gray-700 font-medium' : 'text-gray-400'}`}>
+                        {notif.description}
+                      </p>
+                      <span className="text-[9px] text-gray-400 block mt-1">{getRelativeTime(notif.created_at)}</span>
+                    </div>
+                    {!notif.is_read && (
+                      <div className="w-2 h-2 rounded-full bg-blue-600 mt-1.5 shrink-0" />
+                    )}
+                  </div>
+                );
+              }) : (
+                <div className="py-6 text-center text-gray-400 text-xs">
+                  Tidak ada notifikasi baru.
                 </div>
-                <div className="text-left">
-                  <p className="text-xs font-bold text-gray-800">Pengajuan Dana Disetujui</p>
-                  <p className="text-[10px] text-gray-500 mt-0.5 leading-normal">
-                    Pengajuan dana operasional untuk perbaikan freezer telah disetujui oleh Owner.
-                  </p>
-                  <span className="text-[9px] text-gray-400 block mt-1">10 menit yang lalu</span>
-                </div>
-              </div>
-
-              {/* Item 2 */}
-              <div className="flex gap-3 hover:bg-gray-50 p-2 rounded-xl transition-colors cursor-pointer" onClick={handleViewAll}>
-                <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <div className="text-left">
-                  <p className="text-xs font-bold text-gray-800">Pengajuan Restok Diperbarui</p>
-                  <p className="text-[10px] text-gray-500 mt-0.5 leading-normal">
-                    Pengajuan restok 50kg Sosis Bratwurst dari Cabang Utama telah diubah statusnya menjadi Dikirim.
-                  </p>
-                  <span className="text-[9px] text-gray-400 block mt-1">Hari ini, 09:00 AM</span>
-                </div>
-              </div>
-
-              {/* Item 3 */}
-              <div className="flex gap-3 hover:bg-gray-50 p-2 rounded-xl transition-colors cursor-pointer" onClick={handleViewAll}>
-                <div className="w-8 h-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </div>
-                <div className="text-left">
-                  <p className="text-xs font-bold text-gray-800">Pengajuan Void Ditolak</p>
-                  <p className="text-[10px] text-gray-500 mt-0.5 leading-normal">
-                    Permintaan pembatalan transaksi #TRX-002 ditolak karena alasan tidak lengkap.
-                  </p>
-                  <span className="text-[9px] text-gray-400 block mt-1">Kemarin</span>
-                </div>
-              </div>
+              )}
             </div>
           </div>
         )}
 
-        {/* Refresh */}
-        <button className="w-11 h-11 flex items-center justify-center rounded-xl text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-all">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        {/* Sinkronisasi Global */}
+        <button 
+          onClick={() => {
+            if (isSyncing) return;
+            setIsSyncing(true);
+            window.dispatchEvent(new Event('global-sync'));
+            setSyncToast(true);
+            setTimeout(() => {
+              setIsSyncing(false);
+              setSyncToast(false);
+            }, 2000);
+          }}
+          className={`w-11 h-11 flex items-center justify-center rounded-xl text-gray-500 hover:bg-gray-100 hover:text-blue-600 transition-all ${isSyncing ? 'pointer-events-none' : ''}`}
+          title="Sinkronisasi Data"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 transition-transform duration-700 ${isSyncing ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
         </button>
@@ -153,21 +242,34 @@ export default function TopBar() {
         <div className="flex items-center gap-3">
           <div className="text-right">
             <p className="text-sm font-bold text-[#0B3B91]">
-            {userName}
-          </p>
-          <p className="text-xs text-slate-500 capitalize">
-            {userRole}
-          </p>
+              {userName}
+            </p>
+            <p className="text-xs text-slate-500 capitalize">
+              {userRole}
+            </p>
           </div>
           <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-md">
-          <img
-            src={ownerProfile}
-            alt="Owner"
-            className="w-full h-full object-cover"
-          />
-        </div>
+            <img
+              src={ownerProfile}
+              alt="Owner"
+              className="w-full h-full object-cover"
+            />
+          </div>
         </div>
       </div>
     </header>
+
+      {/* Toast Sinkronisasi */}
+      {syncToast && (
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[9999] animate-fadeIn">
+          <div className="flex items-center gap-3 px-5 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl shadow-2xl">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            <span className="text-sm font-semibold">Data berhasil disinkronkan!</span>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

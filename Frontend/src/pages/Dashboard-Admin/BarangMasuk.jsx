@@ -1,28 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
 import {
-  MdQrCodeScanner,
-  MdSave,
   MdHistory,
   MdKeyboardArrowDown,
   MdChevronLeft,
   MdChevronRight,
   MdSearch,
-  MdOutlineLightbulb
 } from 'react-icons/md';
 
-import { fetchProduks, createBatch, fetchBatches, updateBatch } from '../../services/adminApi';
+import { fetchProduks, createBatch, fetchBatches, updateBatch, fetchKategoris } from '../../services/adminApi';
 import SuccessModal from '../../components/admin/SuccessModal.jsx';
 import BatchDetailModal from '../../components/admin/BatchDetailModal.jsx';
-
-function formatDate(dateStr) {
-  if (!dateStr) return '-';
-  const date = new Date(dateStr);
-  return date.toLocaleDateString('id-ID', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-}
+import FormTambahProduk from '../../components/admin/FormTambahProduk.jsx';
 
 function formatRupiah(number) {
   if (!number) return '';
@@ -34,24 +22,26 @@ function parseRupiah(rupiahString) {
 }
 
 export default function BarangMasuk() {
+  const [activeTab, setActiveTab] = useState('lama'); // 'lama' or 'baru'
   const [products, setProducts] = useState([]);
+  const [kategoris, setKategoris] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // History / Entry Terakhir states
   const [historyBatches, setHistoryBatches] = useState([]);
   const [historyPage, setHistoryPage] = useState(1);
   const itemsPerPage = 5;
-  
+
   // Modal states
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [selectedBatch, setSelectedBatch] = useState(null);
-  
+
   // Form states
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [editBatchId, setEditBatchId] = useState(null);
-  
+
   const [formData, setFormData] = useState({
     productId: '',
     jumlah: '',
@@ -69,12 +59,14 @@ export default function BarangMasuk() {
 
   const loadData = async () => {
     try {
-      const [prods, batches] = await Promise.all([
+      const [prods, batches, kats] = await Promise.all([
         fetchProduks(),
-        fetchBatches()
+        fetchBatches(),
+        fetchKategoris()
       ]);
       setProducts(prods);
       setHistoryBatches(batches);
+      setKategoris(kats);
     } catch (err) {
       console.error("Gagal memuat data:", err);
     } finally {
@@ -86,6 +78,11 @@ export default function BarangMasuk() {
     loadData();
   }, []);
 
+  // Clear validation error when user starts typing or selecting a product
+  useEffect(() => {
+    if (error) setError('');
+  }, [formData, searchQuery]);
+
   // Handle outside click for combobox
   useEffect(() => {
     function handleClickOutside(event) {
@@ -96,20 +93,6 @@ export default function BarangMasuk() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [dropdownRef]);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    if (name === 'hargaBeli') {
-      const rawValue = parseRupiah(value);
-      setFormData(prev => ({ ...prev, [name]: rawValue }));
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
-    }
-    setError('');
-  };
 
   const handleSimpan = async (e) => {
     e.preventDefault();
@@ -197,6 +180,13 @@ export default function BarangMasuk() {
     setSelectedBatch(null);
   };
 
+  const handleSuccessTambahBaru = () => {
+    setSuccessMessage('Produk Baru Berhasil Ditambahkan!');
+    setIsSuccessModalOpen(true);
+    setActiveTab('lama'); // switch back to lama to add batch if they want
+    loadData();
+  };
+
   // Pagination for History
   const totalPages = Math.ceil(historyBatches.length / itemsPerPage);
   const displayedHistory = historyBatches.slice((historyPage - 1) * itemsPerPage, historyPage * itemsPerPage);
@@ -208,12 +198,13 @@ export default function BarangMasuk() {
     if (historyPage < totalPages) setHistoryPage(historyPage + 1);
   };
 
-  const selectedProduct = products.find(p => p.id === Number(formData.productId));
-  const filteredProducts = products.filter(p => p.nama_produk.toLowerCase().includes(searchQuery.toLowerCase()));
+  const filteredProducts = products.filter((p) =>
+    p.nama_produk.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <div className="px-6 py-2 md:px-8 md:py-4 w-full relative">
-      
+
       <div className="mb-4">
         <h1 className="text-3xl font-bold text-[#082B7A] mb-2">
           Input Barang Masuk
@@ -227,10 +218,26 @@ export default function BarangMasuk() {
 
         {/* Left Col: Main Form */}
         <div className="lg:col-span-2 space-y-6">
-          <form 
-            onSubmit={handleSimpan}
-            className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 md:p-8 h-full flex flex-col"
-          >
+          <div className="flex bg-gray-100 rounded-xl p-1 mb-2 max-w-fit">
+            <button
+              onClick={() => setActiveTab('lama')}
+              className={`px-6 py-2 rounded-lg text-sm font-bold transition ${activeTab === 'lama' ? 'bg-white text-[#082B7A] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              Tambah Produk Lama
+            </button>
+            <button
+              onClick={() => setActiveTab('baru')}
+              className={`px-6 py-2 rounded-lg text-sm font-bold transition ${activeTab === 'baru' ? 'bg-white text-[#082B7A] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              Tambah Produk Baru
+            </button>
+          </div>
+
+          {activeTab === 'lama' ? (
+            <form
+              onSubmit={handleSimpan}
+              className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 md:p-8 h-full flex flex-col"
+            >
             {error && (
               <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded-r-xl text-sm font-semibold">
                 {error}
@@ -238,18 +245,18 @@ export default function BarangMasuk() {
             )}
 
             <div className="space-y-6">
-              
+
               {/* Custom Searchable Dropdown */}
               <div ref={dropdownRef} className="relative">
                 <label className="block text-sm font-bold text-[#082B7A] mb-2 flex items-center gap-2">
-                  <MdSearch size={18}/> Cari Produk
+                  <MdSearch size={18} /> Cari Produk
                 </label>
-                
-                <div 
+
+                <div
                   className="w-full h-12 border border-gray-200 rounded-xl flex items-center justify-between px-4 cursor-text bg-white focus-within:border-[#082B7A] focus-within:ring-1 focus-within:ring-[#082B7A] transition-all"
                   onClick={() => setIsDropdownOpen(true)}
                 >
-                  <input 
+                  <input
                     type="text"
                     placeholder="Pilih produk untuk menambah stok..."
                     value={searchQuery}
@@ -257,7 +264,7 @@ export default function BarangMasuk() {
                       setSearchQuery(e.target.value);
                       setIsDropdownOpen(true);
                       if (formData.productId) {
-                         setFormData(prev => ({...prev, productId: ''}));
+                        setFormData(prev => ({ ...prev, productId: '' }));
                       }
                     }}
                     className="flex-1 w-full outline-none bg-transparent text-sm font-semibold text-gray-700"
@@ -268,8 +275,8 @@ export default function BarangMasuk() {
                 {isDropdownOpen && (
                   <div className="absolute z-10 w-full mt-2 bg-white border border-gray-100 shadow-xl rounded-xl max-h-60 overflow-y-auto">
                     {filteredProducts.length > 0 ? (
-                      filteredProducts.map(p => (
-                        <div 
+                      filteredProducts.map((p) => (
+                        <div
                           key={p.id}
                           className="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b border-gray-50 last:border-0"
                           onClick={() => {
@@ -278,133 +285,151 @@ export default function BarangMasuk() {
                             setIsDropdownOpen(false);
                           }}
                         >
-                          <div className="font-bold text-gray-800">{p.nama_produk}</div>
-                          <div className="text-xs text-gray-500">Stok: {p.stok_total} Unit | SKU: {p.sku}</div>
+                          <div className="font-bold text-gray-800">
+                            {p.nama_produk}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            Stok: {p.stok_total} Unit | SKU: {p.sku}
+                          </div>
                         </div>
                       ))
                     ) : (
-                      <div className="px-4 py-3 text-sm text-gray-500">Tidak ada produk ditemukan</div>
+                      <div className="px-4 py-3 text-sm text-gray-500">
+                        Produk tidak ditemukan.
+                      </div>
                     )}
                   </div>
                 )}
               </div>
 
-              {/* Data Terisi Otomatis */}
-              {selectedProduct && (
-                <div className="grid grid-cols-3 gap-4 p-5 bg-gray-50 border border-gray-100 rounded-xl">
-                  <div>
-                    <span className="block text-xs text-gray-500 font-bold uppercase mb-1">Nama Produk</span>
-                    <span className="text-[#082B7A] font-bold text-sm">{selectedProduct.nama_produk}</span>
-                  </div>
-                  <div>
-                    <span className="block text-xs text-gray-500 font-bold uppercase mb-1">SKU</span>
-                    <span className="text-[#082B7A] font-bold text-sm">{selectedProduct.sku || '-'}</span>
-                  </div>
-                  <div>
-                    <span className="block text-xs text-gray-500 font-bold uppercase mb-1">Stok Saat Ini</span>
-                    <div className="text-[#082B7A] font-bold">
-                       <span className="text-2xl mr-1">{selectedProduct.stok_total}</span>
-                       <span className="text-xs">Unit</span>
+              {/* Product Info Card (muncul saat produk dipilih) */}
+              {formData.productId && (() => {
+                const selectedProd = products.find(p => p.id === formData.productId);
+                if (!selectedProd) return null;
+                return (
+                  <div className="flex items-center gap-6 bg-[#F0F3FA] border border-[#D5DDEE] rounded-xl p-4">
+                    <div className="flex-1">
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Nama Produk</p>
+                      <p className="text-sm font-bold text-[#082B7A]">{selectedProd.nama_produk}</p>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">SKU</p>
+                      <p className="text-sm font-bold text-[#082B7A]">{selectedProd.sku || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Stok Saat Ini</p>
+                      <p className="text-2xl font-extrabold text-[#082B7A]">
+                        {selectedProd.stok_total} <span className="text-sm font-semibold text-gray-500">Unit</span>
+                      </p>
                     </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
-              {/* Tanggal & Jumlah */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Row: Jumlah Stok Baru + Tanggal Kedaluwarsa */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-xs font-bold text-gray-600 mb-2">Jumlah Stok Baru</label>
+                  <label className="block text-sm font-bold text-[#082B7A] mb-2">
+                    Jumlah Stok Baru
+                  </label>
                   <input
                     type="number"
-                    required
-                    name="jumlah"
                     min="1"
                     placeholder="0"
                     value={formData.jumlah}
-                    onChange={handleChange}
-                    className="w-full h-11 px-4 border border-gray-200 rounded-xl focus:outline-none focus:border-[#082B7A] text-sm font-semibold"
+                    onChange={(e) => setFormData(prev => ({ ...prev, jumlah: e.target.value }))}
+                    className="w-full h-12 px-4 border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 focus:outline-none focus:border-[#082B7A] focus:ring-1 focus:ring-[#082B7A] transition-all"
                   />
                 </div>
-                
+
                 <div>
-                  <label className="block text-xs font-bold text-gray-600 mb-2">Tanggal Kedaluwarsa</label>
+                  <label className="block text-sm font-bold text-[#082B7A] mb-2">
+                    Tanggal Kedaluwarsa
+                  </label>
                   <input
                     type="date"
-                    required
-                    name="expiredDate"
                     value={formData.expiredDate}
-                    onChange={handleChange}
-                    className="w-full h-11 px-4 border border-gray-200 rounded-xl focus:outline-none focus:border-[#082B7A] text-sm font-semibold text-gray-600"
+                    onChange={(e) => setFormData(prev => ({ ...prev, expiredDate: e.target.value }))}
+                    className="w-full h-12 px-4 border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 focus:outline-none focus:border-[#082B7A] focus:ring-1 focus:ring-[#082B7A] transition-all"
                   />
                 </div>
               </div>
 
-              {/* Harga Beli & Supplier */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Row: Harga Beli + Supplier */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-xs font-bold text-gray-600 mb-2">Harga Beli per Unit (Rp)</label>
+                  <label className="block text-sm font-bold text-[#082B7A] mb-2">
+                    Harga Beli
+                  </label>
                   <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-semibold text-sm">Rp</span>
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-gray-400">Rp</span>
                     <input
                       type="text"
-                      name="hargaBeli"
-                      placeholder="0"
+                      placeholder="50.000"
                       value={formData.hargaBeli ? formatRupiah(formData.hargaBeli) : ''}
-                      onChange={handleChange}
-                      className="w-full h-11 pl-10 pr-4 border border-gray-200 rounded-xl focus:outline-none focus:border-[#082B7A] text-sm font-semibold"
+                      onChange={(e) => setFormData(prev => ({ ...prev, hargaBeli: parseRupiah(e.target.value) }))}
+                      className="w-full h-12 pl-10 pr-4 border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 focus:outline-none focus:border-[#082B7A] focus:ring-1 focus:ring-[#082B7A] transition-all"
                     />
                   </div>
                 </div>
-                
+
                 <div>
-                  <label className="block text-xs font-bold text-gray-600 mb-2">Supplier</label>
+                  <label className="block text-sm font-bold text-[#082B7A] mb-2">
+                    Nama Supplier
+                  </label>
                   <input
                     type="text"
-                    name="supplier"
-                    placeholder="Contoh: PT. Bintang Jaya"
+                    placeholder="Masukkan nama supplier..."
                     value={formData.supplier}
-                    onChange={handleChange}
-                    className="w-full h-11 px-4 border border-gray-200 rounded-xl focus:outline-none focus:border-[#082B7A] text-sm font-semibold"
+                    onChange={(e) => setFormData(prev => ({ ...prev, supplier: e.target.value }))}
+                    className="w-full h-12 px-4 border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 focus:outline-none focus:border-[#082B7A] focus:ring-1 focus:ring-[#082B7A] transition-all"
                   />
                 </div>
               </div>
 
               {/* Catatan */}
               <div>
-                <label className="block text-xs font-bold text-gray-600 mb-2">Catatan / Keterangan</label>
+                <label className="block text-sm font-bold text-[#082B7A] mb-2">
+                  Catatan / Keterangan
+                </label>
                 <textarea
-                  name="catatan"
                   rows={3}
                   placeholder="Tambahkan informasi tambahan pengiriman atau kondisi barang..."
                   value={formData.catatan}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-[#082B7A] text-sm font-semibold resize-none"
+                  onChange={(e) => setFormData(prev => ({ ...prev, catatan: e.target.value }))}
+                  className="w-full p-4 border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 resize-none focus:outline-none focus:border-[#082B7A] focus:ring-1 focus:ring-[#082B7A] transition-all"
                 />
               </div>
 
             </div>
 
-            {/* Submit Button */}
-            <div className="mt-auto pt-8 flex justify-end gap-4">
+            {/* Tombol Aksi */}
+            <div className="flex items-center justify-center gap-4 mt-8 pt-6 border-t border-gray-100">
               <button
                 type="button"
                 onClick={handleBatal}
-                className="px-6 py-2.5 border border-gray-300 text-gray-600 font-bold rounded-[20px] hover:bg-gray-50 transition-colors"
-                disabled={submitting}
+                className="px-8 py-3 border border-gray-300 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-all"
               >
                 Batal
               </button>
-              
-              <button
-                type="submit"
-                disabled={submitting}
-                className="px-8 py-2.5 bg-[#FF7A00] hover:bg-orange-600 text-white font-bold rounded-[20px] transition-all shadow-md shadow-orange-500/20 disabled:opacity-50"
-              >
-                {submitting ? 'Menyimpan...' : (editBatchId ? 'Simpan Perubahan' : 'Simpan Stok')}
-              </button>
-            </div>
-          </form>
-
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="px-6 py-3 bg-[#082B7A] text-white font-bold rounded-xl hover:bg-[#0B3B91] disabled:opacity-50 transition"
+                >
+                  {submitting ? 'Menyimpan...' : 'Simpan Barang Masuk'}
+                </button>
+              </div>
+            </form>
+          ) : (
+            <FormTambahProduk
+              isOpen={true}
+              onClose={() => setActiveTab('lama')}
+              onSuccess={handleSuccessTambahBaru}
+              kategoris={kategoris}
+              isInline={true}
+            />
+          )}
         </div>
 
         {/* Right Col: Entry Terakhir Panel */}
@@ -424,8 +449,8 @@ export default function BarangMasuk() {
                 displayedHistory.map(batch => {
                   const prod = batch.produk || {};
                   return (
-                    <div 
-                      key={batch.id} 
+                    <div
+                      key={batch.id}
                       className="group p-4 rounded-2xl border border-gray-50 hover:bg-blue-50 hover:border-blue-100 cursor-pointer transition-all"
                       onClick={() => setSelectedBatch(batch)}
                     >
@@ -437,12 +462,12 @@ export default function BarangMasuk() {
                           +{batch.stok} Unit
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center gap-2 text-[11px] text-gray-500 font-medium mb-1.5">
                         <MdHistory size={14} />
-                        Hari ini, {new Date(batch.tanggal_masuk).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'})}
+                        Hari ini, {new Date(batch.tanggal_masuk).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
                       </div>
-                      
+
                       {batch.supplier && (
                         <div className="text-[11px] text-gray-400 font-medium truncate">
                           Supplier: {batch.supplier}
@@ -457,8 +482,8 @@ export default function BarangMasuk() {
             {/* Pagination Controls */}
             {totalPages > 1 && (
               <div className="mt-4 pt-4 border-t border-gray-50 flex items-center justify-center gap-4">
-                <button 
-                  onClick={handlePrevPage} 
+                <button
+                  onClick={handlePrevPage}
                   disabled={historyPage === 1}
                   className="w-8 h-8 rounded-full flex items-center justify-center text-[#082B7A] hover:bg-blue-50 disabled:opacity-30 transition-colors"
                 >
@@ -467,8 +492,8 @@ export default function BarangMasuk() {
                 <span className="text-xs font-bold text-gray-400">
                   {historyPage} / {totalPages}
                 </span>
-                <button 
-                  onClick={handleNextPage} 
+                <button
+                  onClick={handleNextPage}
                   disabled={historyPage === totalPages}
                   className="w-8 h-8 rounded-full flex items-center justify-center text-[#082B7A] hover:bg-blue-50 disabled:opacity-30 transition-colors"
                 >
@@ -479,22 +504,21 @@ export default function BarangMasuk() {
           </div>
         </div>
 
+        <BatchDetailModal
+          isOpen={!!selectedBatch}
+          onClose={() => setSelectedBatch(null)}
+          batch={selectedBatch}
+          onEdit={handleEditFromPopup}
+          onSave={handleSaveFromPopup}
+        />
+
+        <SuccessModal
+          isOpen={isSuccessModalOpen}
+          onClose={() => setIsSuccessModalOpen(false)}
+          title="Pemberitahuan"
+          description={successMessage}
+        />
       </div>
-
-      <BatchDetailModal 
-        isOpen={!!selectedBatch}
-        onClose={() => setSelectedBatch(null)}
-        batch={selectedBatch}
-        onEdit={handleEditFromPopup}
-        onSave={handleSaveFromPopup}
-      />
-
-      <SuccessModal
-        isOpen={isSuccessModalOpen}
-        onClose={() => setIsSuccessModalOpen(false)}
-        title="Pemberitahuan"
-        description={successMessage}
-      />
 
     </div>
   );

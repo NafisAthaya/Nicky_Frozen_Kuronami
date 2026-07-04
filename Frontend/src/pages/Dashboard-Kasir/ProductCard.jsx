@@ -39,6 +39,7 @@ export default function ProductCard({ product, isSelected, onSelect }) {
     id={`product-${product.id}`}
     onClick={handleClick}
     className={`
+      flex flex-col h-full
       bg-white rounded-3xl overflow-hidden cursor-pointer relative
       transition-all duration-200 shadow border
       ${
@@ -106,19 +107,21 @@ export default function ProductCard({ product, isSelected, onSelect }) {
     </div>
 
     {/* Info */}
-    <div className="p-4">
-      <div
-        title={product.name}
-        className="text-[15px] font-bold text-gray-900 truncate mb-1"
-      >
-        {product.name}
-      </div>
-
-      {product.sku && (
-        <div className="text-[11px] text-gray-400 mb-1">
-          {product.sku}
+    <div className="p-4 flex-1 flex flex-col justify-between">
+      <div>
+        <div
+          title={product.name}
+          className="text-[15px] font-bold text-gray-900 truncate mb-1"
+        >
+          {product.name}
         </div>
-      )}
+
+        {product.sku && (
+          <div className="text-[11px] text-gray-400 mb-1">
+            {product.sku}
+          </div>
+        )}
+      </div>
 
       <div className="text-[#082B7A] text-2xl font-extrabold mt-2">
         {formatRupiah(product.price)}

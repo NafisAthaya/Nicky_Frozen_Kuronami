@@ -4,15 +4,21 @@ import TopBar from './TopBar';
 
 export default function DashboardLayout() {
   return (
-    <div className="flex h-screen bg-[#F5F7FB]">
+    <div className="flex h-screen bg-[#F6F7FB]">
+      {/* Sidebar Statis di Kiri (Lebar: 280px) */}
       <Sidebar />
 
-      <div className="flex flex-col flex-1 ml-64">
+      {/* Area Kanan: Tambahkan ml-[280px] agar terdorong ke kanan */}
+      <div className="flex-1 flex flex-col overflow-hidden ml-[280px]">
+        
+        {/* TopBar Statis di Atas */}
         <TopBar />
 
-        <main className="flex-1 overflow-y-auto p-8">
-          <Outlet />
+        {/* Area Konten Utama (Outlet) */}
+        <main className="flex-1 overflow-x-hidden overflow-y-auto p-8">
+          <Outlet /> {/* Ini tempat Beranda.jsx dirender */}
         </main>
+
       </div>
     </div>
   );

@@ -6,6 +6,8 @@ import { useNavigate } from 'react-router-dom';
 export default function TopBar() {
 
   const [showProfile, setShowProfile] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncToast, setSyncToast] = useState(false);
   const [photo, setPhoto] = useState(ownerProfile);
   const user = JSON.parse(localStorage.getItem("user"));
   console.log("TOPBAR USER", user);
@@ -47,6 +49,7 @@ export default function TopBar() {
   }, []);
 
   return (
+    <>
     <header className="h-[72px] bg-white border-b border-gray-200 px-6 flex items-center justify-between">
 
       {/* Search */}
@@ -108,11 +111,24 @@ export default function TopBar() {
           </svg>
         </button>
 
-        {/* Refresh */}
-        <button className="text-blue-700">
+        {/* Sinkronisasi Global */}
+        <button 
+          onClick={() => {
+            if (isSyncing) return;
+            setIsSyncing(true);
+            window.dispatchEvent(new Event('global-sync'));
+            setSyncToast(true);
+            setTimeout(() => {
+              setIsSyncing(false);
+              setSyncToast(false);
+            }, 2000);
+          }}
+          className={`w-11 h-11 flex items-center justify-center rounded-xl text-blue-700 hover:bg-gray-100 hover:text-blue-800 transition-all ${isSyncing ? 'pointer-events-none' : ''}`}
+          title="Sinkronisasi Data"
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            className="h-5 w-5"
+            className={`h-5 w-5 transition-transform duration-700 ${isSyncing ? 'animate-spin' : ''}`}
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -131,11 +147,11 @@ export default function TopBar() {
         {/* User */}
         <div className="text-right">
           <p className="text-sm font-semibold text-gray-800">
-            Minji
+            {user?.name || 'Kasir'}
           </p>
 
           <p className="text-xs text-gray-500">
-            Kasir • Shift Pagi: 08:00 - 15:00
+            {user?.role === 'kasir' ? `Kasir • ${localStorage.getItem('shift') || 'Shift 1'}` : 'Kasir'}
           </p>
         </div>
 
@@ -155,11 +171,11 @@ export default function TopBar() {
 
             <div className="px-5 py-4">
               <h3 className="font-semibold text-slate-800">
-                Minji Clarissa
+                {user?.name || 'Kasir'}
               </h3>
 
               <p className="text-xs text-slate-500">
-                KSR-0012
+                {user?.email || 'kasir@nickyfrozen.com'}
               </p>
             </div>
 
@@ -176,5 +192,18 @@ export default function TopBar() {
         )}
       </div>
     </header>
+
+      {/* Toast Sinkronisasi */}
+      {syncToast && (
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[9999] animate-fadeIn">
+          <div className="flex items-center gap-3 px-5 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl shadow-2xl">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            <span className="text-sm font-semibold">Data berhasil disinkronkan!</span>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

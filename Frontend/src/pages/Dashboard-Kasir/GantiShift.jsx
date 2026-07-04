@@ -1,4 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
+import toast from 'react-hot-toast';
+import axiosInstance from '../../api/axios';
+import useAuthStore from '../../store/authStore';
 import {
   HiOutlineRefresh,
   HiOutlineCash,
@@ -29,24 +32,21 @@ export default function GantiShift() {
   const [showLaporan, setShowLaporan] = useState(false);
   const [transactions, setTransactions] = useState([]);
   const [expenses, setExpenses] = useState([]);
+  
+  const user = JSON.parse(localStorage.getItem('user')) || {};
+  const shiftName = localStorage.getItem('shift') || 'Shift 1';
+  const loginTime = localStorage.getItem('loginTime') || new Date().toISOString();
 
   useEffect(() => {
   loadData();
   }, []);
   const loadData = async () => {
   try {
-    const trxResponse = await fetch(
-      'http://127.0.0.1:8000/api/transaksi'
-    );
+    const trxResponse = await axiosInstance.get('/kasir/transaksi');
+    const trxData = trxResponse.data.data || trxResponse.data;
 
-    const trxData = await trxResponse.json();
-
-    const pengeluaranResponse = await fetch(
-      'http://127.0.0.1:8000/api/pengeluaran'
-    );
-
-    const pengeluaranData =
-      await pengeluaranResponse.json();
+    const pengeluaranResponse = await axiosInstance.get('/kasir/pengeluaran');
+    const pengeluaranData = pengeluaranResponse.data.data || pengeluaranResponse.data;
 
     setTransactions(trxData);
 
@@ -127,9 +127,43 @@ export default function GantiShift() {
     setUangLaci('');
   };
 
-  const handleSelesaiKeluar = () => {
-    setShowLaporan(false);
-    setUangLaci('');
+  const handleSelesaiKeluar = async () => {
+    // Save to backend
+    try {
+
+      const payload = {
+        waktu_tutup: new Date().toISOString(),
+        waktu_buka: loginTime,
+        nama_shift: shiftName,
+        saldo_awal: 0, // Should be fetched from previous session ideally
+        total_penjualan: totalPenjualan,
+        total_pengeluaran: totalPengeluaran,
+        saldo_akhir_sistem: expectedCash,
+        saldo_aktual: parsedUangLaci,
+        selisih: selisih,
+        catatan: ''
+      };
+
+      const res = await axiosInstance.post('/kasir/sesi-kasir', {
+        ...payload,
+        status: 'tutup',
+      });
+      const data = res.data;
+      
+      if (data.status === 'success') {
+        setShowLaporan(false);
+        setUangLaci('');
+        // redirect to login or show success message
+        const logout = useAuthStore.getState().logoutSuccess;
+        if(logout) logout();
+        window.location.href = '/';
+      } else {
+        toast.error(data.message || 'Gagal menyimpan laporan shift');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Terjadi kesalahan saat menutup shift');
+    }
   };
 
   const handlePrintLaporan = () => {
@@ -158,7 +192,7 @@ export default function GantiShift() {
             </div>
             <div>
               <h2>Shift Berakhir</h2>
-              <p>Kasir: Minji • 08:00 - 15:00</p>
+              <p>Kasir: {user.name || 'Kasir'} • {shiftName}</p>
             </div>
           </div>
           <div className="flex flex-col items-end">
@@ -347,11 +381,11 @@ export default function GantiShift() {
               <div className="p-4 flex justify-between border-b border-dashed border-gray-300">
                 <div>
                   <span className="block text-xs text-gray-400 mb-1">Kasir</span>
-                  <strong>Minji</strong>
+                  <strong>{user.name || 'Kasir'}</strong>
                 </div>
                 <div className="text-right">
                   <span className="block text-xs text-gray-400 mb-1">Shift</span>
-                  <strong>Pagi (08:00 - 15:00)</strong>
+                  <strong>{shiftName}</strong>
                 </div>
               </div>
 

@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import useAuthStore from '../../store/authStore';
 import {
   MdGridView,
   MdOutlineInventory2,
@@ -14,7 +15,7 @@ import ownerProfile from '../../assets/OwnerProfile.png';
 const topMenuItems = [
   { id: 'beranda', label: 'Beranda', path: '/admin', icon: <MdGridView size={20} /> },
   { id: 'stok', label: 'Stok Barang', path: '/admin/stok-barang', icon: <MdOutlineInventory2 size={20} /> },
-  { id: 'kategori', label: 'Kategori Item', path: '/admin/kategori-item', icon: <MdOutlineCategory size={20} /> },
+  { id: 'kategori', label: 'Kategori Produk', path: '/admin/kategori-item', icon: <MdOutlineCategory size={20} /> },
   { id: 'barangmasuk', label: 'Barang Masuk', path: '/admin/barang-masuk', icon: <MdOutlineMoveToInbox size={20} /> },
 ];
 
@@ -26,19 +27,32 @@ const bottomMenuItems = [
 export default function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
+  const logoutSuccess = useAuthStore((state) => state.logoutSuccess);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
-  // Ambil data user yang login dari localStorage
-  const user = (() => {
+  // State reaktif untuk data user
+  const [user, setUser] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem('user'));
     } catch {
       return null;
     }
-  })();
+  });
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      try {
+        setUser(JSON.parse(localStorage.getItem('user')));
+      } catch {
+        setUser(null);
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   const userName = user?.name || 'Admin';
-  const userRole = user?.role || 'admin';
+  const userRole = 'Admin';
 
   const isActive = (path) => {
     if (path === '/admin') {
@@ -48,7 +62,7 @@ export default function Sidebar() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('user');
+    logoutSuccess();
     navigate('/');
   };
 

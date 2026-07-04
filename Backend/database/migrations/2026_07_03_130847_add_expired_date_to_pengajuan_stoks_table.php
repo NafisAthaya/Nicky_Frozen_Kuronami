@@ -8,15 +8,15 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->string('email')->unique()->after('username');
+        Schema::table('pengajuan_stoks', function (Blueprint $table) {
+            $table->date('expired_date')->nullable()->after('jumlah_request');
         });
     }
 
     public function down(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn('email');
+        Schema::table('pengajuan_stoks', function (Blueprint $table) {
+            $table->dropColumn('expired_date');
         });
     }
 };

@@ -34,15 +34,7 @@ const faqs = [
       "Tekan Enter atau klik nama produk, sistem akan otomatis menambahkan barang tersebut ke keranjang."
     ]
   },
-  {
-    title: "2. Cara menahan pesanan jika pelanggan tertinggal dompet (Hold Order)",
-    content: [
-      "Pada layar transaksi, klik tombol 'Simpan Pesanan'.",
-      "Masukkan nama pelanggan atau keterangan keranjang untuk identifikasi.",
-      "Klik Save. Layar akan kosong dan siap untuk pelanggan berikutnya.",
-      "Untuk memanggil kembali, buka menu 'Daftar Tersimpan' dan pilih pesanan yang sesuai."
-    ]
-  },
+
   {
     title: "3. Langkah membatalkan item barang yang salah masuk ke keranjang",
     content: [
@@ -88,7 +80,7 @@ const cards = [
     id: 'shift',
     icon: HiOutlineClock,
     title: "Antrean & Shift",
-    desc: "Panduan menahan pesanan sementara (Hold Order) dan..."
+    desc: "Panduan mengatur pergantian shift dan..."
   },
   {
     id: 'akun',
@@ -351,33 +343,6 @@ export default function Bantuan() {
     <div className="space-y-6">
       <h1 className="text-3xl font-bold text-[#082B7A] mb-2">Antrean & Shift</h1>
       <p className="text-gray-500 mb-6">Temukan panduan cepat untuk operasional kasir sehari-hari. Pilih kategori di bawah untuk menemukan solusi dari masalah yang sering terjadi.</p>
-
-      <div className="bg-white rounded-2xl border border-gray-200 p-6 lg:flex gap-6">
-        <div className="lg:w-1/3">
-          <div className="w-14 h-14 rounded-xl bg-blue-600 text-white flex items-center justify-center text-xl mb-4"><HiOutlinePause /></div>
-          <h3>Bagaimana cara menahan pesanan (Hold Order) jika pelanggan harus kembali ke rak?</h3>
-        </div>
-        <div className="lg:flex-1">
-          <ul className="space-y-4">
-            <li className="flex gap-4 items-start">
-              <span className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-bold shrink-0">1</span>
-              <span>Pada layar transaksi, klik tombol <span className="px-3 py-1 rounded-lg border border-gray-300 bg-white text-gray-700 text-sm font-medium inline-flex items-center gap-1"><HiOutlineBookmark className="inline text-base"/> Simpan Pesanan</span>.</span>
-            </li>
-            <li className="flex gap-4 items-start">
-              <span className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-bold shrink-0">2</span>
-              <span>Masukkan nama pelanggan atau keterangan keranjang untuk identifikasi.</span>
-            </li>
-            <li className="flex gap-4 items-start">
-              <span className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-bold shrink-0">3</span>
-              <span>Klik <span className="text-blue-600 font-medium">Save</span>. Layar akan kosong dan siap untuk pelanggan berikutnya.</span>
-            </li>
-            <li className="flex gap-4 items-start">
-              <span className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-bold shrink-0">4</span>
-              <span>Untuk memanggil kembali, buka menu <span className="text-blue-600 font-medium"><HiOutlineBookmark className="inline text-base"/> Daftar Tersimpan</span> dan pilih pesanan yang sesuai.</span>
-            </li>
-          </ul>
-        </div>
-      </div>
 
       <div className="bg-white rounded-2xl border border-gray-200 p-6 lg:flex gap-6">
         <div className="lg:w-1/3">

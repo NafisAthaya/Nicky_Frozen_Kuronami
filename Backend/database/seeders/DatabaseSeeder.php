@@ -3,23 +3,62 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\Cabang;
+use App\Models\Produk;
+use App\Models\ProdukBatch; // <--- PASTIKAN BARIS INI ADA
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
-        // User::factory(10)->create();
-
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        // 1. Bikin Data Cabang Utama
+        $cabangUtama = Cabang::create([
+            'nama_cabang' => 'Nicky Frozen - Pusat Yogyakarta',
+            'alamat' => 'Jl. Prambanan No. 12, Sleman, DIY',
         ]);
+
+        // 2. Bikin Akun Owner
+        User::create([
+            'name' => 'Nicky Owner',
+            'username' => 'owner_nicky',
+            'password' => Hash::make('password123'),
+            'role' => 'owner',
+            'cabang_id' => $cabangUtama->id,
+        ]);
+
+        // 3. Bikin Akun Kasir
+        User::create([
+            'name' => 'Kasir_Nicky',
+            'username' => 'kasir_nicky',
+            'password' => Hash::make('kasir123'),
+            'role' => 'kasir',
+            'cabang_id' => $cabangUtama->id,
+        ]);
+
+        // 4. Bikin Beberapa Data Master Produk
+        Produk::create([
+            'sku' => '8991234567890',
+            'nama_produk' => 'Sosis Sapi Bakar Premium 500g',
+            'kategori' => 'Olahan Daging',
+            'image' => null, 
+            'harga_beli' => 35000,
+            'harga_jual' => 45000,
+            'stok_total' => 0, // Nanti bertambah via tabel produk_batches
+            'cabang_id' => $cabangUtama->id,
+        ]);
+
+        ProdukBatch::create([
+            'produk_id' => 1, // ID Sosis Sapi Bakar
+            'barcode_custom' => 'SS-1224-001', // Ini yang discan kasir nanti
+            'stok' => 50,
+            'expired_date' => '2026-12-31',
+            'tanggal_masuk' => now(),
+        ]);
+
+        // Update stok total di tabel produk
+        $produkSosis = Produk::find(1);
+        $produkSosis->update(['stok_total' => 50]);
     }
 }

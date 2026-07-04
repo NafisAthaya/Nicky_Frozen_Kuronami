@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import {
   MdInventory2,
   MdFilterList,
@@ -33,12 +34,15 @@ function getInitials(name) {
 }
 
 export default function DashboardOperasional() {
+  const { searchQuery } = useOutletContext(); // <--- UNIVERSAL SEARCH
+
   const [stats, setStats] = useState({
     total_produk: 0,
     total_stok: 0,
     expiring_count: 0,
     expiring_produks: [],
     potensi_kerugian: 0,
+    table_data: [],
   });
   const [loading, setLoading] = useState(true);
 
@@ -62,6 +66,10 @@ export default function DashboardOperasional() {
       }
     };
     loadStats();
+
+    const handleGlobalSync = () => loadStats();
+    window.addEventListener('global-sync', handleGlobalSync);
+    return () => window.removeEventListener('global-sync', handleGlobalSync);
   }, [filterParams]);
 
   const handleResetFilter = () => {
@@ -71,6 +79,18 @@ export default function DashboardOperasional() {
       sort_expiry: 'asc',
     });
   };
+
+  const filteredTableData = useMemo(() => {
+    if (!stats.table_data) return [];
+    if (!searchQuery) return stats.table_data;
+    
+    const lowerQuery = searchQuery.toLowerCase();
+    return stats.table_data.filter(
+      (p) =>
+        (p.nama_produk && p.nama_produk.toLowerCase().includes(lowerQuery)) ||
+        (p.sku && p.sku.toLowerCase().includes(lowerQuery))
+    );
+  }, [stats.table_data, searchQuery]);
 
   return (
     <div className="p-6 md:p-8 w-full relative">
@@ -200,14 +220,14 @@ export default function DashboardOperasional() {
           </thead>
 
           <tbody className="divide-y divide-gray-100">
-            {stats.table_data && stats.table_data.length === 0 ? (
+            {filteredTableData && filteredTableData.length === 0 ? (
               <tr>
                 <td colSpan="4" className="text-center py-12 text-gray-400 font-medium">
                   Belum ada data produk untuk ditampilkan.
                 </td>
               </tr>
             ) : (
-              stats.table_data && stats.table_data.map((product) => {
+              filteredTableData && filteredTableData.map((product) => {
                 let expiryStatus = 'normal';
                 if (product.days_left !== null) {
                    expiryStatus = getExpiryClass(product.days_left);

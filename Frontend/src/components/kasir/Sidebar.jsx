@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import useAuthStore from '../../store/authStore';
 
 import {
   HiOutlineShoppingCart,
@@ -22,32 +23,7 @@ const menuItems = [
     ),
   },
 
-  {
-  id: 'tersimpan',
-  label: 'Pesanan Tersimpan',
-  path: '/kasir/tersimpan',
-  icon: (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      className="h-5 w-5"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-      strokeWidth={1.5}
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M3.75 6.75A2.25 2.25 0 016 4.5h12a2.25 2.25 0 012.25 2.25v10.5A2.25 2.25 0 0118 19.5H6a2.25 2.25 0 01-2.25-2.25V6.75z"
-      />
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M8.25 9h7.5M8.25 12h7.5M8.25 15h4.5"
-      />
-    </svg>
-    ),
-  },
+
 
   {
     id: 'riwayat',
@@ -99,6 +75,7 @@ const profileItem = null;
 export default function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
+  const logoutSuccess = useAuthStore((state) => state.logoutSuccess);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const isActive = (path) => {
@@ -116,6 +93,7 @@ export default function Sidebar() {
     localStorage.removeItem('userRole');
     localStorage.removeItem('userName');
     localStorage.removeItem('userAvatar');
+    logoutSuccess(); // Clear token and user from store and localStorage
     navigate('/');
   };
 

@@ -16,6 +16,7 @@ return new class extends Migration
         $table->string('sku')->unique(); // Barcode pabrik bawaan
         $table->string('nama_produk');
         $table->string('kategori'); // e.g., Daging Sapi, Olahan Seafood
+        $table->string('image')->nullable(); // <--- TAMBAHKAN BARIS INI
         $table->decimal('harga_beli', 15, 2);
         $table->decimal('harga_jual', 15, 2);
         $table->integer('stok_total')->default(0); // Akumulasi stok dari seluruh batch

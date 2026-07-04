@@ -1,13 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import {
   MdArrowBack,
   MdSend,
   MdRemove,
   MdAdd,
+  MdSearch,
+  MdKeyboardArrowDown,
 } from 'react-icons/md';
 
-import { fetchProduks } from '../../services/adminApi';
+import { fetchProduks, fetchKategoris } from '../../services/adminApi';
+import useAuthStore from '../../store/authStore';
+import axiosInstance from '../../api/axios';
 import SuccessModal from '../../components/admin/SuccessModal.jsx';
 
 export default function PengajuanStok() {
@@ -17,22 +22,47 @@ export default function PengajuanStok() {
   const [loading, setLoading] = useState(true);
 
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
-  const [jumlah, setJumlah] = useState(50);
+  const [jumlah, setJumlah] = useState('');
   const [selectedProductId, setSelectedProductId] = useState('');
+  const [kategoris, setKategoris] = useState([]);
+  const [selectedKategori, setSelectedKategori] = useState('');
+  const [catatan, setCatatan] = useState('');
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const data = await fetchProduks();
-        setProducts(data);
+        const [prods, kats] = await Promise.all([
+          fetchProduks(),
+          fetchKategoris()
+        ]);
+        setProducts(prods);
+        setKategoris(kats);
       } catch (error) {
-        console.error("Gagal memuat produk:", error);
+        console.error("Gagal memuat data:", error);
       } finally {
         setLoading(false);
       }
     };
     loadData();
+
+    const handleGlobalSync = () => loadData();
+    window.addEventListener('global-sync', handleGlobalSync);
+    return () => window.removeEventListener('global-sync', handleGlobalSync);
   }, []);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [dropdownRef]);
 
   const handleKurang = () => {
     if (jumlah > 1) {
@@ -41,7 +71,7 @@ export default function PengajuanStok() {
   };
 
   const handleTambah = () => {
-    setJumlah(jumlah + 1);
+    setJumlah((jumlah || 0) + 1);
   };
 
   const handleChangeJumlah = (e) => {
@@ -58,15 +88,35 @@ export default function PengajuanStok() {
   };
 
   const selectedProduct = products.find(p => p.id === Number(selectedProductId));
-  const hargaPokok = selectedProduct ? selectedProduct.harga_beli : 0;
+  const kategoriProduk = selectedProduct ? selectedProduct.kategori : '-';
 
-  const handleSubmit = (e) => {
+  const filteredProducts = products.filter((p) => {
+    const matchName = p.nama_produk.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchCategory = selectedKategori ? p.kategori === selectedKategori : true;
+    return matchName && matchCategory;
+  });
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!selectedProductId) return;
+    if (!selectedProductId || !jumlah) return;
 
-    // Untuk saat ini hanya memunculkan modal success karena backend pengajuan belum diimplementasi sepenuhnya
-    // di request ini, fokus ke CRUD produk.
-    setIsSuccessModalOpen(true);
+    try {
+      const response = await axiosInstance.post('/admin/pengajuan-stok', {
+        produk_id: selectedProductId,
+        jumlah: jumlah,
+        catatan: catatan || 'Pengajuan dari form stok barang'
+      });
+
+      const data = response.data;
+      if (data.status === 'success') {
+        setIsSuccessModalOpen(true);
+      } else {
+        toast.error(data.message || 'Gagal mengajukan stok');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || 'Terjadi kesalahan saat mengajukan stok');
+    }
   };
 
   const handleCloseModal = () => {
@@ -104,8 +154,35 @@ export default function PengajuanStok() {
         {/* Form */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-          {/* Nama Produk */}
+          {/* Kategori Produk */}
           <div>
+            <label className="block font-semibold text-gray-700 mb-2">
+              Kategori Produk
+            </label>
+            {loading ? (
+              <div className="w-full h-12 px-4 border border-gray-300 rounded-xl flex items-center bg-gray-50 text-gray-500">Memuat kategori...</div>
+            ) : (
+              <select
+                value={selectedKategori}
+                onChange={(e) => {
+                  setSelectedKategori(e.target.value);
+                  setSelectedProductId('');
+                  setSearchQuery('');
+                }}
+                className="w-full h-12 px-4 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-200 bg-gray-50 cursor-pointer"
+              >
+                <option value="">Semua Kategori</option>
+                {kategoris.map((kat) => (
+                  <option key={kat.id} value={kat.name}>
+                    {kat.name}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+
+          {/* Nama Produk */}
+          <div ref={dropdownRef} className="relative">
             <label className="block font-semibold text-gray-700 mb-2">
               Nama Produk
               <span className="text-red-500 ml-1">*</span>
@@ -114,48 +191,64 @@ export default function PengajuanStok() {
             {loading ? (
               <div className="w-full h-12 px-4 border border-gray-300 rounded-xl flex items-center bg-gray-50 text-gray-500">Memuat produk...</div>
             ) : (
-              <select
-                required
-                value={selectedProductId}
-                onChange={(e) => setSelectedProductId(e.target.value)}
-                className="w-full h-12 px-4 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-200 bg-gray-50"
-              >
-                <option value="">Pilih produk...</option>
-                {products.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.nama_produk} (Sisa: {p.stok_total})
-                  </option>
-                ))}
-              </select>
+              <>
+                <div
+                  className="w-full h-12 border border-gray-300 rounded-xl flex items-center justify-between px-4 cursor-text bg-white focus-within:ring-2 focus-within:ring-blue-200 transition-all"
+                  onClick={() => setIsDropdownOpen(true)}
+                >
+                  <MdSearch size={20} className="text-gray-400 mr-2" />
+                  <input
+                    type="text"
+                    placeholder="Ketik untuk mencari produk..."
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setIsDropdownOpen(true);
+                      if (selectedProductId) {
+                        setSelectedProductId('');
+                      }
+                    }}
+                    className="flex-1 w-full outline-none bg-transparent text-sm text-gray-700"
+                  />
+                  <MdKeyboardArrowDown size={20} className="text-gray-400 ml-2" />
+                </div>
+
+                {isDropdownOpen && (
+                  <div className="absolute z-10 w-full mt-2 bg-white border border-gray-100 shadow-xl rounded-xl max-h-60 overflow-y-auto">
+                    {filteredProducts.length > 0 ? (
+                      filteredProducts.map((p) => (
+                        <div
+                          key={p.id}
+                          className={`p-3 hover:bg-blue-50 cursor-pointer flex justify-between border-b border-gray-50 last:border-0 ${selectedProductId === p.id ? 'bg-blue-50 font-bold text-[#082B7A]' : 'text-gray-700'}`}
+                          onClick={() => {
+                            setSelectedProductId(p.id);
+                            setSearchQuery(p.nama_produk);
+                            setIsDropdownOpen(false);
+                          }}
+                        >
+                          <span>{p.nama_produk}</span>
+                          <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded-full">
+                            Sisa: {p.stok_total}
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-4 text-center text-gray-500 text-sm">Produk tidak ditemukan</div>
+                    )}
+                  </div>
+                )}
+              </>
             )}
           </div>
 
-          {/* Cabang */}
-          <div>
-            <label className="block font-semibold text-gray-700 mb-2">
-              Cabang Tujuan
-              <span className="text-red-500 ml-1">*</span>
-            </label>
-
-            <select
-              required
-              defaultValue="Cabang Sudirman"
-              className="w-full h-12 px-4 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-200 bg-gray-50"
-            >
-              <option>Cabang Sudirman</option>
-              <option>Cabang Utama</option>
-              <option>Cabang Melati</option>
-            </select>
-          </div>
-
           {/* Jumlah */}
-          <div>
+          <div className="md:col-span-2">
             <label className="block font-semibold text-gray-700 mb-2">
               Jumlah Produk
               <span className="text-red-500 ml-1">*</span>
             </label>
 
-            <div className="flex border border-gray-300 rounded-xl overflow-hidden h-12">
+            <div className="flex border border-gray-300 rounded-xl overflow-hidden h-12 w-full md:w-1/2">
               <button
                 type="button"
                 onClick={handleKurang}
@@ -170,6 +263,7 @@ export default function PengajuanStok() {
                 onChange={handleChangeJumlah}
                 min="1"
                 className="flex-1 text-center outline-none"
+                placeholder="0"
               />
 
               <button
@@ -182,25 +276,7 @@ export default function PengajuanStok() {
             </div>
           </div>
 
-          {/* Estimasi */}
-          <div>
-            <label className="block font-semibold text-gray-700 mb-2">
-              Estimasi Biaya
-            </label>
 
-            <div className="flex items-center border border-gray-300 bg-gray-50 rounded-xl px-4 h-12">
-              <span className="text-gray-500 mr-2">Rp</span>
-              <input
-                readOnly
-                value={formatRupiah(jumlah * hargaPokok)}
-                className="flex-1 font-bold text-lg outline-none bg-transparent"
-              />
-            </div>
-
-            <p className="text-xs text-gray-500 mt-2">
-              * Berdasarkan harga beli Rp {formatRupiah(hargaPokok)}/pcs
-            </p>
-          </div>
 
           {/* Catatan */}
           <div className="md:col-span-2">
@@ -210,6 +286,8 @@ export default function PengajuanStok() {
 
             <textarea
               rows={5}
+              value={catatan}
+              onChange={(e) => setCatatan(e.target.value)}
               placeholder="Tambahkan catatan untuk pengajuan restock ini..."
               className="w-full border border-gray-300 rounded-xl p-4 resize-none focus:outline-none focus:ring-2 focus:ring-blue-200"
             />

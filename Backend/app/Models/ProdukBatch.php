@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class ProdukBatch extends Model
 {
+    use HasFactory;
+
     protected $table = 'produk_batches';
 
     protected $fillable = [
@@ -14,6 +17,9 @@ class ProdukBatch extends Model
         'stok',
         'expired_date',
         'tanggal_masuk',
+        'harga_beli',
+        'supplier',
+        'catatan',
     ];
 
     protected $casts = [

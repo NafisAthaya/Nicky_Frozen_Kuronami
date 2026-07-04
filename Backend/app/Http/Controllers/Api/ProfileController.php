@@ -4,36 +4,95 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\User;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use App\Models\User;
 
 class ProfileController extends Controller
 {
-            public function uploadPhoto(Request $request)
-        {
-            $request->validate([
-                'photo' => 'required|image|max:2048',
-                'user_id' => 'required|integer',
-            ]);
+    /**
+     * Upload Foto Profil
+     */
+    public function uploadPhoto(Request $request)
+    {
+        $request->validate([
+            'photo' => 'required|image|max:2048',
+            'user_id' => 'required|integer',
+        ]);
 
-            $user = \App\Models\User::findOrFail($request->user_id);
+        $user = User::findOrFail($request->user_id);
 
-            if ($user->foto) {
-                Storage::disk('public')->delete($user->foto);
-            }
-
-            $path = $request->file('photo')->store(
-                'profile',
-                'public'
-            );
-
-            $user->foto = $path;
-            $user->save();
-
-            return response()->json([
-                'success' => true,
-                'photo' => asset('storage/' . $path),
-                'path'  => $path,
-            ]);
+        if ($user->foto) {
+            Storage::disk('public')->delete($user->foto);
         }
+
+        $path = $request->file('photo')->store(
+            'profile',
+            'public'
+        );
+
+        $user->foto = $path;
+        $user->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Foto profil berhasil diperbarui',
+            'photo' => asset('storage/' . $path),
+            'path' => $path,
+        ], 200);
+    }
+
+    /**
+     * Update Profil
+     */
+    public function updateProfile(Request $request)
+    {
+        $user = $request->user();
+
+        $request->validate([
+            'name'  => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
+        ]);
+
+        $user->update([
+            'name'  => $request->name,
+            'email' => $request->email,
+            'phone' => $request->phone,
+        ]);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Profil berhasil diperbarui',
+            'data' => $user,
+        ], 200);
+    }
+
+    /**
+     * Update Password
+     */
+    public function updatePassword(Request $request)
+    {
+        $user = $request->user();
+
+        $request->validate([
+            'current' => 'required',
+            'new' => 'required|string|min:6',
+        ]);
+
+        if (!Hash::check($request->current, $user->password)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Password saat ini salah',
+            ], 422);
+        }
+
+        $user->update([
+            'password' => Hash::make($request->new),
+        ]);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Password berhasil diperbarui',
+        ], 200);
+    }
 }
