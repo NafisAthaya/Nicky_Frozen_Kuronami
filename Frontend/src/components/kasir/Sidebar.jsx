@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import useAuthStore from '../../store/authStore';
 
@@ -9,7 +9,6 @@ import {
   HiOutlineSwitchHorizontal,
   HiOutlineQuestionMarkCircle,
 } from 'react-icons/hi';
-import { MdOutlineLogout } from 'react-icons/md';
 
 const menuItems = [
   {
@@ -76,7 +75,18 @@ export default function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const logoutSuccess = useAuthStore((state) => state.logoutSuccess);
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  
+  const user = useAuthStore((state) => state.user);
+
+  const userName = user?.name || 'Kasir';
+  const userRole = 'Kasir';
+  const rawCabang = user?.cabang?.nama_cabang || user?.cabang_nama || 'Belum Ditentukan';
+  const userCabang = rawCabang.replace(/nicky frozen(\s*-\s*|\s+)?/gi, '').trim() || 'Belum Ditentukan';
+
+  const userAvatar = user?.foto 
+    ? `http://127.0.0.1:8000/storage/${user.foto}`
+    : `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=2563eb&color=fff&bold=true&size=40`;
+
 
   const isActive = (path) => {
     if (!path) return false;
@@ -87,14 +97,6 @@ export default function Sidebar() {
   const handleClick = (item) => {
     if (item.disabled || !item.path) return;
     navigate(item.path);
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('userRole');
-    localStorage.removeItem('userName');
-    localStorage.removeItem('userAvatar');
-    logoutSuccess(); // Clear token and user from store and localStorage
-    navigate('/');
   };
 
   const renderMenuItem = (item) => {
@@ -136,11 +138,22 @@ export default function Sidebar() {
       </div>
 
       {/* User Profile */}
-      <div className="px-6 py-4 flex items-center gap-3 border-b border-[#5A7AC9]">
-        <div>
-          <p className="text-blue-200 text-sm">
-            Cabang Utama
+      <div className="px-6 py-4 flex items-center gap-3 border-b border-[#5A7AC9] mb-4">
+        <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 bg-[#FF7A00]">
+          <img
+            src={userAvatar}
+            alt="Avatar"
+            className="w-full h-full object-cover"
+          />
+        </div>
+
+        <div className="min-w-0">
+          <p className="text-white text-sm font-semibold truncate">
+            Halo, {userName}
           </p>
+          <span className="text-[10px] text-blue-200 font-bold uppercase tracking-wider block truncate">
+            {userRole} - {userCabang}
+          </span>
         </div>
       </div>
 
@@ -161,67 +174,8 @@ export default function Sidebar() {
           <HiOutlineQuestionMarkCircle className="w-5 h-5" />
           <span>Bantuan Sistem</span>
         </button>
-
-        <button
-          onClick={() => setShowLogoutModal(true)}
-          className="w-full flex items-center gap-3 px-5 py-4 rounded-xl text-sm font-medium text-red-300 hover:bg-red-500/10 hover:text-red-200 transition-all duration-200"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-5 w-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={1.5}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-            />
-          </svg>
-          <span>Keluar</span>
-        </button>
       </div>
     </aside>
-
-    {/* Logout Confirmation Modal */}
-    {showLogoutModal && (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-        <div className="bg-white rounded-2xl p-6 w-[360px] shadow-2xl flex flex-col items-center">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
-            <MdOutlineLogout
-              size={32}
-              className="text-red-500 rotate-180"
-            />
-          </div>
-
-          <h3 className="text-xl font-bold text-gray-900 mb-2">
-            Konfirmasi Keluar
-          </h3>
-
-          <p className="text-gray-500 text-center mb-6">
-            Apakah Anda yakin ingin keluar?
-          </p>
-
-          <div className="flex w-full gap-3">
-            <button
-              onClick={() => setShowLogoutModal(false)}
-              className="flex-1 py-3 px-4 rounded-xl text-sm font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
-            >
-              Batal
-            </button>
-
-            <button
-              onClick={handleLogout}
-              className="flex-1 py-3 px-4 rounded-xl text-sm font-bold text-white bg-red-500 hover:bg-red-600 transition-colors shadow-lg shadow-red-500/30"
-            >
-              Keluar
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
   </>
 );
 }

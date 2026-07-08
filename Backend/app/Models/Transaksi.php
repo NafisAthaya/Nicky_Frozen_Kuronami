@@ -33,4 +33,9 @@ class Transaksi extends Model
     {
         return $this->hasMany(DetailTransaksi::class);
     }
+
+    public function cabang()
+    {
+        return $this->belongsTo(Cabang::class);
+    }
 }

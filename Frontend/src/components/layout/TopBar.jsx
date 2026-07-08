@@ -57,9 +57,11 @@ export default function TopBar() {
   const userRole = user?.role || 'owner';
   const userName = user?.name || 'Loading...';
   
-  const userAvatar = userRole === 'owner' 
-    ? ownerProfile 
-    : `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=2563eb&color=fff&bold=true&size=40`;
+  const userAvatar = user?.foto 
+    ? `http://127.0.0.1:8000/storage/${user.foto}`
+    : (userRole === 'owner' 
+      ? ownerProfile 
+      : `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=2563eb&color=fff&bold=true&size=40`);
 
   // Fetch Notifikasi dari Backend
   const fetchNotifications = async () => {
@@ -78,7 +80,7 @@ export default function TopBar() {
     // Auto-refresh notifikasi setiap 30 detik agar selalu up-to-date
     const interval = setInterval(() => {
       fetchNotifications();
-    }, 30000);
+    }, 3000);
 
     // Listen for custom event to force refresh (e.g. from Notifikasi page)
     const handleForceRefresh = () => fetchNotifications();

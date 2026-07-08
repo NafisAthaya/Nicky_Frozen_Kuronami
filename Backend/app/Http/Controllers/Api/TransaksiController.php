@@ -11,32 +11,34 @@ use Illuminate\Support\Facades\DB;
 
 class TransaksiController extends Controller
 {
-public function index(Request $request)
-{
-    $query = Transaksi::with([
-        'details.produk',
-        'details.batch',
-        'user'
-    ])->latest();
+    public function index(Request $request)
+    {
+        $query = Transaksi::with([
+            'details.produk',
+            'details.batch',
+            'user',
+            'cabang'
+        ])->latest();
 
-    if ($request->user()) {
-        // Owner has cabang_id = null, so they see all branches
-        if ($request->user()->cabang_id) {
-            $query->where('cabang_id', $request->user()->cabang_id);
+        $cabangId = $request->query('cabang_id');
+        if ($cabangId) {
+            $query->where('cabang_id', $cabangId);
         }
 
-        // Filter transactions for the current shift only if user is kasir
-        if ($request->user()->role === 'kasir') {
-            $lastSesi = \App\Models\SesiKasir::where('cabang_id', $request->user()->cabang_id)
-                ->where('status', 'selesai')
-                ->latest('waktu_selesai')
-                ->first();
+        if ($request->user()) {
+            if ($request->user()->role === 'kasir') {
+                $query->where('cabang_id', $request->user()->cabang_id);
+                
+                $lastSesi = \App\Models\SesiKasir::where('cabang_id', $request->user()->cabang_id)
+                    ->where('status', 'selesai')
+                    ->latest('waktu_selesai')
+                    ->first();
 
-            if ($lastSesi) {
-                $query->where('created_at', '>', $lastSesi->waktu_selesai);
+                if ($lastSesi) {
+                    $query->where('created_at', '>', $lastSesi->waktu_selesai);
+                }
             }
         }
-    }
 
     return response()->json(['data' => $query->get()]);
 }
@@ -63,9 +65,9 @@ public function index(Request $request)
             ]);
 
             foreach ($request->items as $item) {
-                // Find product with batches ordered by expiry (FIFO)
-                $produk = Produk::with(['batches' => function($q) {
-                    $q->where('stok', '>', 0)->orderBy('expired_date', 'asc');
+                // Find product with batches for this branch ordered by expiry (FIFO)
+                $produk = Produk::with(['batches' => function($q) use ($transaksi) {
+                    $q->where('cabang_id', $transaksi->cabang_id)->where('stok', '>', 0)->orderBy('expired_date', 'asc');
                 }])->findOrFail($item['produk_id']);
                 
                 $qtyNeeded = $item['qty'];

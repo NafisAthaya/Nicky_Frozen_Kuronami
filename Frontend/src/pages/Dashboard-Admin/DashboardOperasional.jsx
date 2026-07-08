@@ -251,19 +251,11 @@ export default function DashboardOperasional() {
                   >
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-4">
-                        {/* Image */}
-                        <div className="w-[52px] h-[52px] rounded-2xl bg-gray-100 border border-gray-200 overflow-hidden shrink-0 flex items-center justify-center">
-                          {product.gambar ? (
-                            <img 
-                              src={product.gambar} 
-                              alt={product.nama_produk} 
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <span className="text-gray-400 font-bold text-lg">
-                              {getInitials(product.nama_produk)}
-                            </span>
-                          )}
+                        {/* Initials Only */}
+                        <div className="w-[52px] h-[52px] rounded-2xl bg-[#F0F4FF] border border-[#D1DEFA] overflow-hidden shrink-0 flex items-center justify-center">
+                          <span className="text-[#082B7A] font-bold text-lg">
+                            {getInitials(product.nama_produk)}
+                          </span>
                         </div>
 
                         <div className="min-w-0">

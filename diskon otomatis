@@ -31,7 +31,7 @@ export default function DiskonOtomatis() {
       try {
         const [catsRes, cabangRes] = await Promise.all([
           axiosInstance.get('/owner/kategoris'),
-          axiosInstance.get('/owner/cabang') // Memanggil rute cabang
+          axiosInstance.get('/cabang') // Memanggil rute global cabang
         ]);
         
         setCategories(catsRes.data || []);
@@ -57,6 +57,7 @@ export default function DiskonOtomatis() {
     const fetchRules = async () => {
       setIsLoading(true);
       try {
+        // Kirim query parameter cabang_id agar backend bisa memfilter
         const response = await axiosInstance.get(`/owner/diskon-rules?cabang_id=${selectedCabang}`);
         setRules(response.data.data || []);
       } catch (error) {
@@ -67,10 +68,6 @@ export default function DiskonOtomatis() {
     };
 
     fetchRules();
-
-    const handleGlobalSync = () => fetchRules();
-    window.addEventListener('global-sync', handleGlobalSync);
-    return () => window.removeEventListener('global-sync', handleGlobalSync);
   }, [selectedCabang]);
 
   // Simpan Aturan Baru ke Database

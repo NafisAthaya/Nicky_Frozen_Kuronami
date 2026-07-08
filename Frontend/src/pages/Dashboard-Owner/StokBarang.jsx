@@ -9,6 +9,8 @@ export default function StokBarang() {
   // State untuk Filter Tabel
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [categories, setCategories] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState('');
 
   // State Metrik
   const [metrics, setMetrics] = useState({
@@ -52,8 +54,14 @@ export default function StokBarang() {
   useEffect(() => {
     const fetchStock = async () => {
       try {
-        const response = await axiosInstance.get('/owner/stok');
+        const [response, catRes] = await Promise.all([
+          axiosInstance.get('/owner/stok'),
+          axiosInstance.get('/owner/kategoris').catch(() => ({ data: [] }))
+        ]);
         const rawProduks = response.data.data;
+        if (catRes.data) {
+          setCategories(catRes.data);
+        }
 
         let tempStockData = [];
         let tempTotalQty = 0;
@@ -107,7 +115,7 @@ export default function StokBarang() {
                   daysLeft: daysLeft,
                   rawExpDate: batch.expired_date,
                   // Murni mengambil data path image dari database backend
-                  image: produk.image_url || null, 
+                  image: produk.gambar || null, 
                 });
               }
             });
@@ -141,6 +149,7 @@ export default function StokBarang() {
 
   // LOGIKA FILTER: Menentukan data yang ditampilkan di tabel
   const displayData = stockData.filter(item => {
+    if (selectedCategory && item.category !== selectedCategory) return false;
     if (!startDate && !endDate) return true;
     
     let matchDate = true;
@@ -290,15 +299,25 @@ export default function StokBarang() {
             <p className="text-xs text-slate-400 mt-0.5">Data diurutkan dari barang yang paling cepat kadaluwarsa</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="text-xs px-3 py-1.5 border border-slate-200 rounded-lg text-slate-600 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-slate-50 cursor-pointer"
+            >
+              <option value="">Semua Kategori</option>
+              {categories.map((cat, idx) => (
+                <option key={idx} value={cat.name}>{cat.name}</option>
+              ))}
+            </select>
             <button 
-              onClick={() => { setStartDate(''); setEndDate(''); }}
+              onClick={() => { setStartDate(''); setEndDate(''); setSelectedCategory(''); }}
               className={`px-4 py-1.5 text-xs font-semibold rounded-full transition-all ${
-                !startDate && !endDate
+                !startDate && !endDate && !selectedCategory
                   ? 'bg-[#0A2540] text-white shadow-md'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
-              Semua
+              Reset
             </button>
             <div className="flex items-center gap-2">
               <input 
@@ -337,15 +356,15 @@ export default function StokBarang() {
                   <tr key={item.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
                     <td className="py-4 px-4">
                       <div className="flex items-center gap-3">
-                        {/* Render Gambar Database Berhasil atau Kotak Inisial CSS Bersih */}
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0 shadow-inner">
-                          {item.image ? (
-                            <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
-                          ) : (
-                            <span className="text-xs font-black text-slate-400 tracking-wider">
-                              {item.name.substring(0, 2).toUpperCase()}
-                            </span>
-                          )}
+                        <div className="w-12 h-12 rounded-xl bg-[#F0F4FF] border border-[#D1DEFA] flex items-center justify-center overflow-hidden shrink-0 shadow-inner">
+                          <span className="text-sm font-bold text-[#082B7A] tracking-wider">
+                            {(() => {
+                              const name = item.name || '';
+                              const words = name.trim().split(/\s+/);
+                              if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
+                              return name.substring(0, 2).toUpperCase();
+                            })()}
+                          </span>
                         </div>
                         <div>
                           <p className="text-xs font-bold text-slate-800">{item.name}</p>

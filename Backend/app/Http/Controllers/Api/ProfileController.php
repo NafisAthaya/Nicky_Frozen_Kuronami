@@ -26,10 +26,28 @@ class ProfileController extends Controller
             Storage::disk('public')->delete($user->foto);
         }
 
-        $path = $request->file('photo')->store(
-            'profile',
-            'public'
-        );
+        $file = $request->file('photo');
+        $path = '';
+
+        if (function_exists('imagecreatefromstring')) {
+            $image = @imagecreatefromstring(file_get_contents($file));
+            if ($image) {
+                $filename = time() . '_' . uniqid() . '.webp';
+                $path = 'profile/' . $filename;
+                
+                ob_start();
+                imagewebp($image, null, 80);
+                $image_data = ob_get_clean();
+                imagedestroy($image);
+                
+                Storage::disk('public')->put($path, $image_data);
+            }
+        }
+
+        if (empty($path)) {
+            // Fallback jika ekstensi GD tidak aktif
+            $path = $file->store('profile', 'public');
+        }
 
         $user->foto = $path;
         $user->save();
@@ -51,7 +69,8 @@ class ProfileController extends Controller
 
         $request->validate([
             'name'  => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
+            'email' => 'nullable|string|email|max:255|unique:users,email,' . $user->id,
+            'phone' => 'nullable|string|max:20',
         ]);
 
         $user->update([

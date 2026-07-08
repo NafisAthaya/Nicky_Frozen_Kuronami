@@ -53,6 +53,7 @@ class AuthController extends Controller
                 'email' => $user->email,
                 'phone' => $user->phone,
                 'role' => $user->role,
+                'foto' => $user->foto,
                 'cabang_id' => $user->cabang_id,
                 'cabang_nama' => $user->cabang?->nama_cabang ?? 'Belum Ditentukan',
             ]

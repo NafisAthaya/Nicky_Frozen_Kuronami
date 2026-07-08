@@ -80,6 +80,10 @@ export default function Pengaturan() {
       }
     };
     fetchSettings();
+
+    const handleGlobalSync = () => fetchSettings();
+    window.addEventListener('global-sync', handleGlobalSync);
+    return () => window.removeEventListener('global-sync', handleGlobalSync);
   }, []);
 
   const handleStrukChange = (field, value) => {

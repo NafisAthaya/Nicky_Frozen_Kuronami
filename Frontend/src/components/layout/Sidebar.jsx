@@ -128,10 +128,11 @@ export default function Sidebar() {
   const userRole = user?.role || 'owner';
   const userName = user?.name || 'Loading...';
   
-  // Gunakan ownerProfile untuk owner, atau UI Avatars untuk kasir/admin
-  const userAvatar = userRole === 'owner' 
-    ? ownerProfile 
-    : `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=2563eb&color=fff&bold=true&size=40`;
+  const userAvatar = user?.foto
+    ? `http://127.0.0.1:8000/storage/${user.foto}`
+    : (userRole === 'owner' 
+      ? ownerProfile 
+      : `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=2563eb&color=fff&bold=true&size=40`);
 
   // Filter main menu
   const filteredMenuItems = menuItems.filter((item) => {

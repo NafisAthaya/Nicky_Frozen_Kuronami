@@ -75,6 +75,10 @@ export default function PopupStruk({
       }
     };
     loadSettings();
+
+    const handleGlobalSync = () => loadSettings();
+    window.addEventListener('global-sync', handleGlobalSync);
+    return () => window.removeEventListener('global-sync', handleGlobalSync);
   }, []);
 
   const now = new Date();

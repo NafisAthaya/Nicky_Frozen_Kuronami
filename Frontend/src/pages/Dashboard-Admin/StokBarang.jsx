@@ -39,17 +39,13 @@ function getStockStatus(stock) {
   };
 }
 
-function getProductEmoji(categoryNames = '') {
-  const lower = categoryNames.toLowerCase();
-
-  if (lower.includes('daging')) return '🥩';
-  if (lower.includes('ayam')) return '🍗';
-  if (lower.includes('ikan')) return '🐟';
-  if (lower.includes('sayur')) return '🥬';
-  if (lower.includes('cemilan')) return '🍟';
-  if (lower.includes('minuman')) return '🥤';
-
-  return '📦';
+function getProductInitials(name = '') {
+  if (!name) return 'PR';
+  const words = name.trim().split(/\s+/);
+  if (words.length >= 2) {
+    return (words[0][0] + words[1][0]).toUpperCase();
+  }
+  return name.substring(0, 2).toUpperCase();
 }
 
 export default function StokBarang() {
@@ -164,6 +160,7 @@ export default function StokBarang() {
         await deleteProduk(deleteTarget.id);
         setSuccessMessage('Produk Berhasil Dihapus!');
         setIsSuccessOpen(true);
+        window.dispatchEvent(new Event('global-sync'));
         loadData();
       } catch (error) {
         console.error('Gagal menghapus', error);
@@ -318,8 +315,8 @@ export default function StokBarang() {
                 const status =
                   getStockStatus(product.stok_total);
 
-                const emoji =
-                  getProductEmoji(categoryNames);
+                const initials =
+                  getProductInitials(product.nama_produk);
 
                 return (
                   <tr
@@ -336,11 +333,12 @@ export default function StokBarang() {
                         <div className="
                           w-10 h-10
                           rounded-xl
-                          bg-gray-100
+                          bg-[#F0F4FF]
+                          border border-[#D1DEFA]
                           flex items-center justify-center
                         ">
-                          <span className="text-xl">
-                            {emoji}
+                          <span className="text-sm font-bold text-[#082B7A]">
+                            {initials}
                           </span>
                         </div>
 

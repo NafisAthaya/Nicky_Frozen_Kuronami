@@ -20,10 +20,22 @@ class AdminDashboardController extends Controller
 
         $produkQuery = Produk::query();
         if ($cabangId) {
-            $produkQuery->where('cabang_id', $cabangId);
+            $produkQuery->whereHas('batches', function($q) use ($cabangId) {
+                $q->where('cabang_id', $cabangId);
+            });
+            $produkQuery->with(['batches' => function($q) use ($cabangId) {
+                $q->where('cabang_id', $cabangId);
+            }]);
+        } else {
+            $produkQuery->with('batches');
         }
 
         $produks = $produkQuery->get();
+        // Recalculate total stok based on loaded batches
+        $produks->transform(function ($produk) {
+            $produk->stok_total = $produk->batches->sum('stok');
+            return $produk;
+        });
         $totalProduk = $produks->count();
         $totalStok = $produks->sum('stok_total');
 
@@ -34,9 +46,7 @@ class AdminDashboardController extends Controller
         $batch7DaysQuery = ProdukBatch::whereBetween('expired_date', [$now, $limit7Days]);
         
         if ($cabangId) {
-            $batch7DaysQuery->whereHas('produk', function ($q) use ($cabangId) {
-                $q->where('cabang_id', $cabangId);
-            });
+            $batch7DaysQuery->where('cabang_id', $cabangId);
         }
         
         $batches7Days = $batch7DaysQuery->with('produk')->get();
@@ -59,16 +69,21 @@ class AdminDashboardController extends Controller
         $endDate = $request->query('end_date');
         $sortExpiry = $request->query('sort_expiry', 'asc');
 
-        $tableQuery = Produk::with(['batches' => function ($q) use ($startDate, $endDate) {
+        $tableQuery = Produk::with(['batches' => function ($q) use ($startDate, $endDate, $cabangId) {
             if ($startDate && $endDate) {
                 $from = Carbon::parse($startDate)->startOfDay();
                 $to = Carbon::parse($endDate)->endOfDay();
                 $q->whereBetween('expired_date', [$from, $to]);
             }
+            if ($cabangId) {
+                $q->where('cabang_id', $cabangId);
+            }
         }]);
 
         if ($cabangId) {
-            $tableQuery->where('cabang_id', $cabangId);
+            $tableQuery->whereHas('batches', function($q) use ($cabangId) {
+                $q->where('cabang_id', $cabangId);
+            });
         }
 
         $allProduks = $tableQuery->get();
@@ -95,7 +110,7 @@ class AdminDashboardController extends Controller
                 'sku' => $produk->sku,
                 'kategori' => $produk->kategori,
                 'harga_jual' => $produk->harga_jual,
-                'gambar' => $produk->gambar ? asset('storage/produk/' . $produk->gambar) : null,
+                'gambar' => $produk->image ? asset('storage/produk/' . $produk->image) : null,
                 'stok_expiring' => $totalStokFiltered,
                 'expired_date' => $nearestExpiry,
                 'days_left' => $daysLeft,
@@ -131,7 +146,9 @@ class AdminDashboardController extends Controller
 
         $query = Produk::query();
         if ($cabangId) {
-            $query->where('cabang_id', $cabangId);
+            $query->whereHas('batches', function($q) use ($cabangId) {
+                $q->where('cabang_id', $cabangId);
+            });
         }
 
         // Filter by kategori
@@ -142,8 +159,8 @@ class AdminDashboardController extends Controller
         $produks = $query->orderBy('nama_produk')->get();
 
         $produks->transform(function ($produk) {
-            $produk->gambar = $produk->gambar
-                ? asset('storage/produk/' . $produk->gambar)
+            $produk->gambar = $produk->image
+                ? asset('storage/produk/' . $produk->image)
                 : null;
             return $produk;
         });
@@ -157,14 +174,14 @@ class AdminDashboardController extends Controller
     public function storeProduk(Request $request)
     {
         $request->validate([
-            'sku' => 'required|string|unique:produks,sku',
+            'sku' => 'nullable|string|unique:produks,sku',
             'nama_produk' => 'required|string|max:255',
             'kategori' => 'required|string|max:255',
-            'harga_beli' => 'required|numeric|min:0',
+            'harga_beli' => 'nullable|numeric|min:0',
             'harga_jual' => 'nullable|numeric|min:0',
             'stok_total' => 'nullable|integer|min:0',
             'cabang_id' => 'required|exists:cabangs,id',
-            'gambar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'gambar' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             'expired_date' => 'nullable|date',
             'supplier' => 'nullable|string|max:255',
         ]);
@@ -173,32 +190,37 @@ class AdminDashboardController extends Controller
         if ($request->hasFile('gambar')) {
             $file = $request->file('gambar');
             $filename = time() . '_' . $file->getClientOriginalName();
-            $file->storeAs('public/produk', $filename);
+            $file->storeAs('produk', $filename, 'public');
             $gambarPath = $filename;
         }
 
+        $sku = $request->sku;
+        if (empty($sku)) {
+            $sku = 'SKU-' . strtoupper(\Illuminate\Support\Str::random(6));
+            while (Produk::where('sku', $sku)->exists()) {
+                $sku = 'SKU-' . strtoupper(\Illuminate\Support\Str::random(6));
+            }
+        }
+
         $produk = Produk::create([
-            'sku' => $request->sku,
+            'sku' => $sku,
             'nama_produk' => $request->nama_produk,
             'kategori' => $request->kategori,
-            'harga_beli' => $request->harga_beli,
             'harga_jual' => $request->harga_jual ?? 0,
             'stok_total' => $request->stok_total ?? 0,
-            'cabang_id' => $request->cabang_id,
-            'gambar' => $gambarPath,
+            'image' => $gambarPath,
         ]);
 
-        if ($produk->stok_total > 0) {
-            \App\Models\ProdukBatch::create([
-                'produk_id' => $produk->id,
-                'barcode_custom' => 'BC-' . strtoupper(\Illuminate\Support\Str::random(8)),
-                'stok' => $produk->stok_total,
-                'expired_date' => $request->expired_date ?? \Carbon\Carbon::now()->addYear()->format('Y-m-d'),
-                'tanggal_masuk' => \Carbon\Carbon::now()->format('Y-m-d'),
-                'harga_beli' => $produk->harga_beli,
-                'supplier' => $request->supplier,
-            ]);
-        }
+        \App\Models\ProdukBatch::create([
+            'produk_id' => $produk->id,
+            'cabang_id' => $request->cabang_id ?? $request->user()->cabang_id ?? 1,
+            'barcode_custom' => 'BC-' . strtoupper(\Illuminate\Support\Str::random(8)),
+            'stok' => $produk->stok_total,
+            'expired_date' => $request->expired_date ?? \Carbon\Carbon::now()->addYear()->format('Y-m-d'),
+            'tanggal_masuk' => \Carbon\Carbon::now()->format('Y-m-d'),
+            'harga_beli' => $request->harga_beli ?? 0,
+            'supplier' => $request->supplier,
+        ]);
 
         return response()->json([
             'message' => 'Produk berhasil ditambahkan',
@@ -217,22 +239,21 @@ class AdminDashboardController extends Controller
             'sku' => 'sometimes|string|unique:produks,sku,' . $id,
             'nama_produk' => 'sometimes|string|max:255',
             'kategori' => 'sometimes|string|max:255',
-            'harga_beli' => 'sometimes|numeric|min:0',
             'harga_jual' => 'nullable|numeric|min:0',
             'stok_total' => 'sometimes|integer|min:0',
-            'gambar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
+            'gambar' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048'
         ]);
 
         $data = $request->only([
             'sku', 'nama_produk', 'kategori',
-            'harga_beli', 'harga_jual', 'stok_total',
+            'harga_jual', 'stok_total',
         ]);
 
         if ($request->hasFile('gambar')) {
             $file = $request->file('gambar');
             $filename = time() . '_' . $file->getClientOriginalName();
-            $file->storeAs('public/produk', $filename);
-            $data['gambar'] = $filename;
+            $file->storeAs('produk', $filename, 'public');
+            $data['image'] = $filename;
         }
 
         $produk->update($data);
@@ -266,9 +287,7 @@ class AdminDashboardController extends Controller
         $query = ProdukBatch::with('produk')->orderBy('created_at', 'desc');
 
         if ($cabangId) {
-            $query->whereHas('produk', function ($q) use ($cabangId) {
-                $q->where('cabang_id', $cabangId);
-            });
+            $query->where('cabang_id', $cabangId);
         }
 
         $limit = $request->query('limit');
@@ -298,6 +317,7 @@ class AdminDashboardController extends Controller
 
         $batch = ProdukBatch::create([
             'produk_id' => $request->produk_id,
+            'cabang_id' => $request->cabang_id ?? $request->user()->cabang_id ?? 1,
             'barcode_custom' => $barcodeCustom,
             'stok' => $request->stok,
             'expired_date' => $request->expired_date,
@@ -364,7 +384,9 @@ class AdminDashboardController extends Controller
 
         $query = Produk::query();
         if ($cabangId) {
-            $query->where('cabang_id', $cabangId);
+            $query->whereHas('batches', function($q) use ($cabangId) {
+                $q->where('cabang_id', $cabangId);
+            });
         }
 
         $kategoris = $query->select('kategori')
@@ -378,7 +400,9 @@ class AdminDashboardController extends Controller
         $result = $kategoris->map(function ($kategori) use ($cabangId) {
             $query = Produk::where('kategori', $kategori);
             if ($cabangId) {
-                $query->where('cabang_id', $cabangId);
+                $query->whereHas('batches', function($q) use ($cabangId) {
+                    $q->where('cabang_id', $cabangId);
+                });
             }
             return [
                 'name' => $kategori,

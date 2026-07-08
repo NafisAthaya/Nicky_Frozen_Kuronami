@@ -1,35 +1,23 @@
 import ownerProfile from '../../assets/OwnerProfile.png';
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import useAuthStore from '../../store/authStore';
 
-
-export default function TopBar() {
+export default function TopBar({ globalSearch, setGlobalSearch }) {
 
   const [showProfile, setShowProfile] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncToast, setSyncToast] = useState(false);
-  const [photo, setPhoto] = useState(ownerProfile);
-  const user = JSON.parse(localStorage.getItem("user"));
-  console.log("TOPBAR USER", user);
+  
+  const user = useAuthStore((state) => state.user);
+  const photo = user?.foto ? `http://127.0.0.1:8000/storage/${user.foto}` : ownerProfile;
+  
   const profileRef = useRef(null);
   const navigate = useNavigate();
+  const location = useLocation();
+  const isBantuanPage = location.pathname === '/kasir/bantuan';
 
-    useEffect(() => {
-
-    const loadPhoto = () => {
-      const user = JSON.parse(localStorage.getItem("user"));
-
-      if (user?.foto) {
-        setPhoto(`http://127.0.0.1:8000/storage/${user.foto}`);
-      } else {
-        setPhoto(ownerProfile);
-      }
-    };
-
-    loadPhoto();
-
-    window.addEventListener("profile-updated", loadPhoto);
-
+  useEffect(() => {
     function handleClickOutside(e) {
       if (
         profileRef.current &&
@@ -42,10 +30,8 @@ export default function TopBar() {
     document.addEventListener("mousedown", handleClickOutside);
 
     return () => {
-      window.removeEventListener("profile-updated", loadPhoto);
       document.removeEventListener("mousedown", handleClickOutside);
     };
-
   }, []);
 
   return (
@@ -54,37 +40,41 @@ export default function TopBar() {
 
       {/* Search */}
       <div className="flex-1 max-w-[460px]">
-        <div className="relative">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            />
-          </svg>
+        {!isBantuanPage && (
+          <div className="relative">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
 
-          <input
-            type="text"
-            placeholder="Cari nama produk atau SKU..."
-           className="
-            w-full
-            bg-[#F5F7FB]
-            rounded-2xl
-            pl-12
-            pr-4
-            h-12
-            text-sm
-            outline-none
-            "
-          />
-        </div>
+            <input
+              type="text"
+              value={globalSearch}
+              onChange={(e) => setGlobalSearch(e.target.value)}
+              placeholder="Cari (Universal)..."
+             className="
+              w-full
+              bg-[#F5F7FB]
+              rounded-2xl
+              pl-12
+              pr-4
+              h-12
+              text-sm
+              outline-none
+              "
+            />
+          </div>
+        )}
       </div>
 
       {/* Right */}

@@ -9,14 +9,14 @@ import { useCart } from '../../hooks/UseCart';
 import useAuthStore from '../../store/authStore';
 import StatusPembayaran from './StatusPembayaran';
 import axiosInstance from '../../api/axios';
-
+import { useOutletContext } from 'react-router-dom';
 
 export default function DashboardKasir() {
   const { token } = useAuthStore();
   const cart = useCart();
   console.log(cart);
   const [activeCategory, setActiveCategory] = useState('semua');
-  const [searchQuery, setSearchQuery] = useState('');
+  const { globalSearch } = useOutletContext();
 
   const [productsData, setProductsData] = useState([]);
   const [categoriesData, setCategoriesData] = useState([]);
@@ -87,8 +87,8 @@ export default function DashboardKasir() {
       );
     }
 
-    if (searchQuery) {
-      const lowerQuery = searchQuery.toLowerCase();
+    if (globalSearch) {
+      const lowerQuery = globalSearch.toLowerCase();
 
       result = result.filter(
         (p) =>
@@ -99,7 +99,7 @@ export default function DashboardKasir() {
     }
 
     return result;
-  }, [productsData, activeCategory, searchQuery]);
+  }, [productsData, activeCategory, globalSearch]);
 
   const handleBarcodeScan = (value) => {
     const lowerValue = value.toLowerCase();

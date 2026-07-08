@@ -24,8 +24,9 @@ class KategoriController extends Controller
                 'name' => $kategori->nama_kategori,
                 'description' => $kategori->description,
                 'product_count' => Produk::where('kategori', $kategori->nama_kategori)
-                    ->where('cabang_id', $kategori->cabang_id)
-                    ->count(),
+                    ->whereHas('batches', function($q) use ($kategori) {
+                        $q->where('cabang_id', $kategori->cabang_id);
+                    })->count(),
             ];
         });
 
@@ -97,7 +98,9 @@ class KategoriController extends Controller
 
         // Update all related products with the new category name
         if ($oldName !== $newName) {
-            Produk::where('cabang_id', $kategori->cabang_id)
+            Produk::whereHas('batches', function($q) use ($kategori) {
+                    $q->where('cabang_id', $kategori->cabang_id);
+                })
                 ->where('kategori', $oldName)
                 ->update(['kategori' => $newName]);
         }
@@ -110,8 +113,9 @@ class KategoriController extends Controller
                 'name' => $kategori->nama_kategori,
                 'description' => $kategori->description,
                 'product_count' => Produk::where('kategori', $newName)
-                    ->where('cabang_id', $kategori->cabang_id)
-                    ->count(),
+                    ->whereHas('batches', function($q) use ($kategori) {
+                        $q->where('cabang_id', $kategori->cabang_id);
+                    })->count(),
             ]
         ]);
     }
@@ -121,7 +125,9 @@ class KategoriController extends Controller
         $kategori = Kategori::findOrFail($id);
         
         // Remove category name from products (set to null or empty)
-        Produk::where('cabang_id', $kategori->cabang_id)
+        Produk::whereHas('batches', function($q) use ($kategori) {
+                $q->where('cabang_id', $kategori->cabang_id);
+            })
             ->where('kategori', $kategori->nama_kategori)
             ->update(['kategori' => null]);
             

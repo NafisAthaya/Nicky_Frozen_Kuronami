@@ -22,7 +22,7 @@ function parseRupiah(rupiahString) {
 }
 
 export default function BarangMasuk() {
-  const [activeTab, setActiveTab] = useState('lama'); // 'lama' or 'baru'
+  const [activeTab, setActiveTab] = useState('restock'); // 'restock' or 'baru'
   const [products, setProducts] = useState([]);
   const [kategoris, setKategoris] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -183,7 +183,7 @@ export default function BarangMasuk() {
   const handleSuccessTambahBaru = () => {
     setSuccessMessage('Produk Baru Berhasil Ditambahkan!');
     setIsSuccessModalOpen(true);
-    setActiveTab('lama'); // switch back to lama to add batch if they want
+    setActiveTab('restock'); // switch back to restock to add batch if they want
     loadData();
   };
 
@@ -220,10 +220,10 @@ export default function BarangMasuk() {
         <div className="lg:col-span-2 space-y-6">
           <div className="flex bg-gray-100 rounded-xl p-1 mb-2 max-w-fit">
             <button
-              onClick={() => setActiveTab('lama')}
-              className={`px-6 py-2 rounded-lg text-sm font-bold transition ${activeTab === 'lama' ? 'bg-white text-[#082B7A] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              onClick={() => setActiveTab('restock')}
+              className={`px-6 py-2 rounded-lg text-sm font-bold transition ${activeTab === 'restock' ? 'bg-white text-[#082B7A] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
             >
-              Tambah Produk Lama
+              Restock
             </button>
             <button
               onClick={() => setActiveTab('baru')}
@@ -233,7 +233,7 @@ export default function BarangMasuk() {
             </button>
           </div>
 
-          {activeTab === 'lama' ? (
+          {activeTab === 'restock' ? (
             <form
               onSubmit={handleSimpan}
               className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 md:p-8 h-full flex flex-col"
@@ -424,7 +424,7 @@ export default function BarangMasuk() {
           ) : (
             <FormTambahProduk
               isOpen={true}
-              onClose={() => setActiveTab('lama')}
+              onClose={() => setActiveTab('restock')}
               onSuccess={handleSuccessTambahBaru}
               kategoris={kategoris}
               isInline={true}

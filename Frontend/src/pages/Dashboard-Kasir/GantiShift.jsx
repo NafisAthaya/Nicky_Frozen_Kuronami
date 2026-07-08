@@ -35,10 +35,17 @@ export default function GantiShift() {
   
   const user = JSON.parse(localStorage.getItem('user')) || {};
   const shiftName = localStorage.getItem('shift') || 'Shift 1';
-  const loginTime = localStorage.getItem('loginTime') || new Date().toISOString();
+  let loginTime = localStorage.getItem('loginTime');
+  if (!loginTime || loginTime === 'undefined' || loginTime === 'null') {
+    loginTime = new Date().toISOString();
+  }
 
   useEffect(() => {
-  loadData();
+    loadData();
+
+    const handleGlobalSync = () => loadData();
+    window.addEventListener('global-sync', handleGlobalSync);
+    return () => window.removeEventListener('global-sync', handleGlobalSync);
   }, []);
   const loadData = async () => {
   try {
@@ -153,6 +160,11 @@ export default function GantiShift() {
       if (data.status === 'success') {
         setShowLaporan(false);
         setUangLaci('');
+        // clear localStorage explicitly
+        localStorage.removeItem('userRole');
+        localStorage.removeItem('userName');
+        localStorage.removeItem('userAvatar');
+        
         // redirect to login or show success message
         const logout = useAuthStore.getState().logoutSuccess;
         if(logout) logout();
@@ -162,7 +174,22 @@ export default function GantiShift() {
       }
     } catch (err) {
       console.error(err);
-      toast.error('Terjadi kesalahan saat menutup shift');
+      
+      const statusCode = err.response?.status;
+      const errorMessage = err.response?.data?.message || 'Terjadi kesalahan saat menutup shift';
+
+      if (statusCode === 401) {
+        toast.error('Sesi kamu telah berakhir. Silakan login kembali.');
+        // Auto logout
+        localStorage.removeItem('userRole');
+        localStorage.removeItem('userName');
+        localStorage.removeItem('userAvatar');
+        const logout = useAuthStore.getState().logoutSuccess;
+        if (logout) logout();
+        setTimeout(() => window.location.href = '/', 1500);
+      } else {
+        toast.error(errorMessage);
+      }
     }
   };
 

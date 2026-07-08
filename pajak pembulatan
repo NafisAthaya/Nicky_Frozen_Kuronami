@@ -24,7 +24,7 @@ export default function PajakPembulatan() {
   useEffect(() => {
     const fetchCabang = async () => {
       try {
-        const response = await axiosInstance.get('/owner/cabang');
+        const response = await axiosInstance.get('/cabang');
         const list = response.data.data || [];
         setCabangList(list);
         
@@ -48,7 +48,7 @@ export default function PajakPembulatan() {
       setIsLoading(true);
       try {
         // Kirim cabang_id yang dipilih ke backend
-        const response = await axiosInstance.get(`/owner/pengaturan-toko?cabang_id=${selectedCabang}`);
+        const response = await axiosInstance.get(`/pengaturan/pajak?cabang_id=${selectedCabang}`);
         if (response.data.data) {
           setSettings(response.data.data);
         }
@@ -58,12 +58,7 @@ export default function PajakPembulatan() {
         setIsLoading(false);
       }
     };
-
     fetchSettings();
-
-    const handleGlobalSync = () => fetchSettings();
-    window.addEventListener('global-sync', handleGlobalSync);
-    return () => window.removeEventListener('global-sync', handleGlobalSync);
   }, [selectedCabang]);
 
   // Simpan perubahan ke database
@@ -71,8 +66,7 @@ export default function PajakPembulatan() {
     setIsSaving(true);
     try {
       // Sisipkan cabang_id agar backend tahu pengaturan ini untuk cabang yang mana
-      // Gunakan POST sesuai definisi route di api.php
-      await axiosInstance.post('/owner/pengaturan-toko', { ...settings, cabang_id: selectedCabang });
+      await axiosInstance.put('/pengaturan/pajak', { ...settings, cabang_id: selectedCabang });
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
     } catch (error) {

@@ -75,7 +75,7 @@ export default function Transaksi() {
 
       // --- TARIK DAFTAR CABANG ---
       try {
-        const resCabang = await axiosInstance.get('/owner/cabang');
+        const resCabang = await axiosInstance.get('/cabang');
         setCabangList(resCabang.data.data || []);
       } catch (err) {
         console.error("Gagal mengambil data cabang:", err);

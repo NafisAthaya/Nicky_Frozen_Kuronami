@@ -23,6 +23,25 @@ import {
   HiOutlineBookmark,
   HiOutlineRefresh
 } from 'react-icons/hi';
+import { FaWhatsapp } from 'react-icons/fa';
+
+const HighlightText = ({ text, highlight }) => {
+  if (!highlight || !highlight.trim()) {
+    return <span>{text}</span>;
+  }
+  const parts = text.split(new RegExp(`(${highlight})`, 'gi'));
+  return (
+    <span>
+      {parts.map((part, i) =>
+        part.toLowerCase() === highlight.toLowerCase() ? (
+          <mark key={i} className="bg-yellow-200 text-black px-1 rounded">{part}</mark>
+        ) : (
+          part
+        )
+      )}
+    </span>
+  );
+};
 
 const faqs = [
   {
@@ -140,71 +159,77 @@ export default function Bantuan() {
 
       <h2 className="text-2xl font-bold text-[#082B7A] mb-5">Solusi Masalah Cepat (FAQ)</h2>
         <div className="space-y-4 mb-10">        
-            {faqs.map((faq, index) => (
+            {faqs.map((faq, index) => {
+              const q = search.toLowerCase();
+              const matchesTitle = faq.title.toLowerCase().includes(q);
+              const matchesContent = faq.content.some(c => c.toLowerCase().includes(q));
+              
+              if (search && !matchesTitle && !matchesContent) {
+                return null;
+              }
+              
+              const isExpanded = search ? true : openFaq === index;
+
+              return (
                 <div
                 key={index}
-                onClick={() => toggleFaq(index)}
                 className="bg-white rounded-2xl border border-gray-200 overflow-hidden cursor-pointer"
               >
-            <div className="flex justify-between items-center p-5 font-semibold text-[#082B7A]">
-              <span>{faq.title}</span>
-              {openFaq === index ? <HiChevronUp className="text-xl text-gray-500" /> : <HiChevronDown className="text-xl text-gray-500" />}
+            <div onClick={() => toggleFaq(index)} className="flex justify-between items-center p-5 font-semibold text-[#082B7A]">
+              <span><HighlightText text={faq.title} highlight={search} /></span>
+              {isExpanded ? <HiChevronUp className="text-xl text-gray-500" /> : <HiChevronDown className="text-xl text-gray-500" />}
             </div>
-            {openFaq === index && (
+            {isExpanded && (
               <div className="px-5 pb-5 text-gray-600">
                 <ul className="list-decimal pl-6 space-y-2 text-gray-600 text-sm leading-7">
                 {faq.content.map((item, i) => (
-                  <li key={i}>{item}</li>
+                  <li key={i}><HighlightText text={item} highlight={search} /></li>
                 ))}
               </ul>
               </div>
             )}
           </div>
-        ))}
+        )})}
       </div>
 
-      <div className="bg-[#082B7A] text-white rounded-2xl p-6 flex items-center justify-between gap-4">
-        <div>
-          <h3>Butuh Bantuan Darurat?</h3>
-          <p>Jika aplikasi error total atau mati lampu, segera hubungi Manajer Toko atau IT Support.</p>
+      <div className="mt-8 bg-gradient-to-r from-[#0d348a] to-[#144bc4] rounded-[20px] p-8 flex flex-col md:flex-row justify-between items-start md:items-center shadow-lg">
+        <div className="mb-4 md:mb-0 max-w-lg">
+          <h2 className="text-3xl font-bold text-white mb-2 tracking-tight">Butuh Bantuan Darurat?</h2>
+          <p className="text-blue-100 text-[15px]">Jika aplikasi error total atau mati lampu, segera hubungi Manajer Toko atau IT Support.</p>
         </div>
         <button
-          onClick={() =>
-            window.open(
-            "https://wa.me/62882007588067?text=Halo%20Admin,%0A%0ASaya%20mengalami%20kendala%20pada%20aplikasi%20kasir%20Nicky%20Frozen.%0A%0ANama:%20%0ACabang:%20%0AKendala:%20%0A%0AMohon%20bantuannya.%20Terima%20kasih.",
-            "_blank"
-          )
-          }
-          className="bg-green-500 hover:bg-green-600 px-5 py-3 rounded-xl font-medium flex items-center gap-2"
+          onClick={() => {
+            const user = JSON.parse(localStorage.getItem('user'));
+            const nama = user?.name || 'Kasir';
+            const msg = `Halo Tim IT,\n\nSaya ${nama} mengalami kendala teknis pada aplikasi POS Nicky Frozen.\n\nDetail Info:\n- Nama: ${nama}\n- Jabatan: Kasir\n- Waktu Kejadian: ${new Date().toLocaleString('id-ID')}\n\nKendala yang dialami:\n[Tulis detail masalah Anda di sini...]\n\nMohon bantuannya segera. Terima kasih.`;
+            window.open(`https://wa.me/62882007588067?text=${encodeURIComponent(msg)}`, '_blank');
+          }}
+          className="bg-white text-green-700 hover:bg-green-50 hover:scale-105 border border-green-200 font-extrabold text-sm px-6 py-3.5 rounded-2xl flex items-center gap-2 shadow-lg shadow-green-100 transition-all duration-300"
         >
-          Hubungi Admin via WhatsApp
+          <FaWhatsapp className="text-green-600 text-xl" />
+          Hubungi Tim IT Sekarang
         </button>
       </div>
     </>
   );
 
   const renderDetailBanner = () => (
-    <div className="bg-[#082B7A] text-white rounded-2xl p-6 flex items-center justify-between mt-8">
-      <div className="flex items-center gap-4">
-        <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center">
-          <HiOutlineChatAlt2 className="wa-icon" />
-        </div>
-        <div>
-          <h3>Masalah belum terselesaikan?</h3>
-          <p>Tim IT Support kami siap membantu Anda.</p>
-        </div>
+    <div className="mt-8 bg-gradient-to-r from-[#0d348a] to-[#144bc4] rounded-[20px] p-8 flex flex-col md:flex-row justify-between items-start md:items-center shadow-lg">
+      <div className="mb-4 md:mb-0 max-w-lg">
+        <h2 className="text-3xl font-bold text-white mb-2 tracking-tight">Masalah belum terselesaikan?</h2>
+        <p className="text-blue-100 text-[15px]">Tim IT Support kami siap membantu Anda.</p>
       </div>
       <button
-        onClick={() =>
-          window.open(
-          "https://wa.me/62882007588067?text=Halo%20Admin,%0A%0ASaya%20mengalami%20kendala%20pada%20aplikasi%20kasir%20Nicky%20Frozen.%0A%0ANama:%20%0ACabang:%20%0AKendala:%20%0A%0AMohon%20bantuannya.%20Terima%20kasih.",
-          "_blank"
-        )
-        }
-        className="bg-white text-[#082B7A] px-5 py-3 rounded-xl font-semibold flex items-center gap-2 hover:bg-gray-100 transition"
+        onClick={() => {
+          const user = JSON.parse(localStorage.getItem('user'));
+          const nama = user?.name || 'Kasir';
+          const msg = `Halo Tim IT,\n\nSaya ${nama} mengalami kendala teknis pada aplikasi POS Nicky Frozen.\n\nDetail Info:\n- Nama: ${nama}\n- Jabatan: Kasir\n- Waktu Kejadian: ${new Date().toLocaleString('id-ID')}\n\nKendala yang dialami:\n[Tulis detail masalah Anda di sini...]\n\nMohon bantuannya segera. Terima kasih.`;
+          window.open(`https://wa.me/62882007588067?text=${encodeURIComponent(msg)}`, '_blank');
+        }}
+        className="bg-white text-green-700 hover:bg-green-50 hover:scale-105 border border-green-200 font-extrabold text-sm px-6 py-3.5 rounded-2xl flex items-center gap-2 shadow-lg shadow-green-100 transition-all duration-300"
       >
-        <HiOutlineChatAlt2 className="wa-icon" />
-        Hubungi IT Support
+        <FaWhatsapp className="text-green-600 text-xl" />
+        Hubungi Tim IT Sekarang
       </button>
     </div>
   );

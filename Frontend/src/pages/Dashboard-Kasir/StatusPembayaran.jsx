@@ -10,6 +10,7 @@ import PopupStruk from './PopupStruk';
 import cabangBg from '../../assets/branch-bg.png';
 import logoNicky from '../../assets/logo-nicky-frozen.jpeg';
 import axiosInstance from '../../api/axios';
+import useAuthStore from '../../store/authStore';
 
 function formatRupiah(num) {
   if (num === 0) return 'Rp 0';
@@ -61,7 +62,7 @@ export default function StatusPembayaran({
 }) {
   const [showStruk, setShowStruk] = useState(false);
 
-  const user = JSON.parse(localStorage.getItem('user')) || {};
+  const user = useAuthStore((state) => state.user) || {};
   const activeKasir = user.name || kasirName;
 
   const [settings, setSettings] = useState({
@@ -86,6 +87,10 @@ export default function StatusPembayaran({
       }
     };
     loadSettings();
+
+    const handleGlobalSync = () => loadSettings();
+    window.addEventListener('global-sync', handleGlobalSync);
+    return () => window.removeEventListener('global-sync', handleGlobalSync);
   }, []);
 
   const now = new Date();
@@ -235,7 +240,7 @@ export default function StatusPembayaran({
             </div>
             <div className="flex flex-col">
               <span className="text-xs text-slate-500 mb-1">Kasir</span>
-              <span className="text-lg font-bold text-slate-900">{kasirName}</span>
+              <span className="text-lg font-bold text-slate-900">{activeKasir}</span>
             </div>
           </div>
 
@@ -300,7 +305,7 @@ export default function StatusPembayaran({
         <PopupStruk
           onClose={() => setShowStruk(false)}
           transactionId={transactionId}
-          kasir={kasirName}
+          kasir={activeKasir}
           items={items}
           subtotal={subtotal}
           tax={tax}

@@ -245,12 +245,15 @@ export default function AturHarga() {
                     <tr key={product.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center overflow-hidden shrink-0 border border-slate-200">
-                            {product.image_url ? (
-                              <img src={product.image_url} alt={product.nama_produk} className="w-full h-full object-cover" />
-                            ) : (
-                              <span className="text-xs font-bold text-slate-400">{product.nama_produk.substring(0, 2).toUpperCase()}</span>
-                            )}
+                          <div className="w-10 h-10 rounded-lg bg-[#F0F4FF] flex items-center justify-center overflow-hidden shrink-0 border border-[#D1DEFA]">
+                            <span className="text-xs font-bold text-[#082B7A] tracking-wider">
+                              {(() => {
+                                const name = product.nama_produk || '';
+                                const words = name.trim().split(/\s+/);
+                                if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
+                                return name.substring(0, 2).toUpperCase();
+                              })()}
+                            </span>
                           </div>
                           <div>
                             <p className="text-sm font-semibold text-gray-900">{product.nama_produk}</p>

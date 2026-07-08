@@ -126,9 +126,17 @@ export default function Bantuan() {
               Jika aplikasi error total atau mati lampu, segera hubungi Manajer Toko atau IT Support.
             </p>
           </div>
-          <button className="bg-white text-[#0A1A3A] hover:bg-gray-50 font-bold text-sm px-5 py-3 rounded-xl flex items-center gap-2 shadow-md transition-all">
-            <FaWhatsapp className="text-green-500" size={18} />
-            Hubungi Admin via WhatsApp
+          <button 
+            onClick={() => {
+              const user = JSON.parse(localStorage.getItem('user'));
+              const nama = user?.name || 'Admin';
+              const msg = `Halo Tim IT,\n\nSaya ${nama} mengalami kendala teknis pada aplikasi admin Nicky Frozen.\n\nDetail Info:\n- Nama: ${nama}\n- Jabatan: Admin\n- Waktu Kejadian: ${new Date().toLocaleString('id-ID')}\n\nKendala yang dialami:\n[Tulis detail masalah Anda di sini...]\n\nMohon bantuannya segera. Terima kasih.`;
+              window.open(`https://wa.me/62882007588067?text=${encodeURIComponent(msg)}`, '_blank');
+            }}
+            className="bg-white text-green-700 hover:bg-green-50 hover:scale-105 border border-green-200 font-extrabold text-sm px-6 py-3.5 rounded-2xl flex items-center gap-2 shadow-lg shadow-green-100 transition-all duration-300"
+          >
+            <FaWhatsapp className="text-green-600 text-xl" />
+            Hubungi Tim IT Sekarang
           </button>
         </div>
 

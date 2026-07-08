@@ -31,28 +31,17 @@ export default function Sidebar() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   // State reaktif untuk data user
-  const [user, setUser] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem('user'));
-    } catch {
-      return null;
-    }
-  });
-
-  useEffect(() => {
-    const handleStorageChange = () => {
-      try {
-        setUser(JSON.parse(localStorage.getItem('user')));
-      } catch {
-        setUser(null);
-      }
-    };
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
+  const user = useAuthStore((state) => state.user);
 
   const userName = user?.name || 'Admin';
   const userRole = 'Admin';
+
+  const rawCabang = user?.cabang?.nama_cabang || user?.cabang_nama || 'Belum Ditentukan';
+  const userCabang = rawCabang.replace(/nicky frozen(\s*-\s*|\s+)?/gi, '').trim() || 'Belum Ditentukan';
+
+  const userAvatar = user?.foto 
+    ? `http://127.0.0.1:8000/storage/${user.foto}`
+    : `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=2563eb&color=fff&bold=true&size=40`;
 
   const isActive = (path) => {
     if (path === '/admin') {
@@ -103,7 +92,7 @@ export default function Sidebar() {
         <div className="px-6 py-4 flex items-center gap-3 border-b border-[#24428B] mb-4">
           <div className="w-10 h-10 rounded-full overflow-hidden shrink-0">
             <img
-              src={ownerProfile}
+              src={userAvatar}
               alt="Avatar"
               className="w-full h-full object-cover"
             />
@@ -113,8 +102,8 @@ export default function Sidebar() {
             <p className="text-white text-sm font-semibold truncate">
               Halo, {userName}
             </p>
-            <span className="text-[10px] text-[#6F8BCE] font-bold uppercase tracking-wider">
-              {userRole}
+            <span className="text-[10px] text-[#6F8BCE] font-bold uppercase tracking-wider block truncate">
+              {userRole} - {userCabang}
             </span>
           </div>
         </div>

@@ -22,9 +22,7 @@ class NotifikasiController extends Controller
             ->where('stok', '>', 0);
             
         if ($cabangId) {
-            $batchQuery->whereHas('produk', function ($q) use ($cabangId) {
-                $q->where('cabang_id', $cabangId);
-            });
+            $batchQuery->where('cabang_id', $cabangId);
         }
         
         $expiredBatches = $batchQuery->get();
@@ -40,7 +38,7 @@ class NotifikasiController extends Controller
 
             if (!$exists) {
                 Notifikasi::create([
-                    'cabang_id' => $batch->produk->cabang_id,
+                    'cabang_id' => $batch->cabang_id,
                     'title' => 'Peringatan Kadaluarsa',
                     'description' => $desc,
                     'type' => 'danger',

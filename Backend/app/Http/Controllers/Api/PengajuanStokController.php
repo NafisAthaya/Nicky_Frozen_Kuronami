@@ -37,12 +37,11 @@ class PengajuanStokController extends Controller
         $user = $request->user();
         $pengajuan = PengajuanStok::create([
             'cabang_id' => ($user && $user->cabang_id) ? $user->cabang_id : 1, // fallback 1 for testing / owner
-            'admin_id' => $user ? $user->id : 1, // fallback 1 for testing
+            'user_id' => $user ? $user->id : 1, // fallback 1 for testing
             'produk_id' => $request->produk_id,
             'jumlah_request' => $request->jumlah,
             'catatan' => $request->catatan,
-            'status' => 'pending',
-            'tanggal_pengajuan' => \Carbon\Carbon::now()->format('Y-m-d')
+            'status' => 'pending'
         ]);
         
         // Notify Owner
@@ -81,19 +80,7 @@ class PengajuanStokController extends Controller
         if ($request->status === 'disetujui') {
             $produk = Produk::findOrFail($pengajuan->produk_id);
             
-            // Tambahkan batch baru ke produk_batches
-            \App\Models\ProdukBatch::create([
-                'produk_id' => $produk->id,
-                'barcode_custom' => 'BC-' . strtoupper(\Illuminate\Support\Str::random(8)),
-                'stok' => $pengajuan->jumlah_request,
-                'expired_date' => $pengajuan->expired_date ?? \Carbon\Carbon::now()->addYear()->format('Y-m-d'),
-                'tanggal_masuk' => \Carbon\Carbon::now()->format('Y-m-d')
-            ]);
-            
-            // Update total stok produk
-            $produk->increment('stok_total', $pengajuan->jumlah_request);
-            
-            $pesan = "Pengajuan stok untuk {$produk->nama_produk} disetujui.";
+            $pesan = "Pengajuan stok untuk {$produk->nama_produk} sejumlah {$pengajuan->jumlah_request} unit telah disetujui. Silakan lakukan Restock secara manual di menu Barang Masuk.";
         } else {
             $pesan = "Pengajuan stok ID {$pengajuan->id} ditolak.";
         }

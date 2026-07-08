@@ -19,8 +19,8 @@ class Cabang extends Model
         return $this->hasMany(User::class);
     }
 
-    public function produks()
+    public function produkBatches()
     {
-        return $this->hasMany(Produk::class);
+        return $this->hasMany(ProdukBatch::class);
     }
 }

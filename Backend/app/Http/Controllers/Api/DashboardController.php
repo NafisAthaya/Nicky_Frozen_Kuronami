@@ -49,8 +49,8 @@ class DashboardController extends Controller
             ->where('transaksis.status', 'berhasil')
             ->whereMonth('transaksis.created_at', $bulanIni)
             ->whereYear('transaksis.created_at', $tahunIni)
-            ->select('produks.nama_produk as name', 'produks.gambar as image', DB::raw('SUM(detail_transaksis.qty) as total_sold'))
-            ->groupBy('produks.id', 'produks.nama_produk', 'produks.gambar')
+            ->select('produks.nama_produk as name', 'produks.image as image', DB::raw('SUM(detail_transaksis.qty) as total_sold'))
+            ->groupBy('produks.id', 'produks.nama_produk', 'produks.image')
             ->orderByDesc('total_sold')
             ->limit(5)
             ->get();

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../../api/axios';
 import ownerProfile from '../../assets/OwnerProfile.png';
+import useAuthStore from '../../store/authStore';
 
 // Helper Format Waktu Relatif
 const getRelativeTime = (dateString) => {
@@ -50,28 +51,14 @@ export default function TopBar({ searchQuery, onSearch }) {
   const navigate = useNavigate();
 
   // State reaktif untuk data user
-  const [user, setUser] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem('user'));
-    } catch {
-      return null;
-    }
-  });
-
-  useEffect(() => {
-    const handleStorageChange = () => {
-      try {
-        setUser(JSON.parse(localStorage.getItem('user')));
-      } catch {
-        setUser(null);
-      }
-    };
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
+  const user = useAuthStore((state) => state.user);
 
   const userName = user?.name || 'Admin';
   const userRole = 'Admin';
+
+  const userAvatar = user?.foto 
+    ? `http://127.0.0.1:8000/storage/${user.foto}`
+    : `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=2563eb&color=fff&bold=true&size=40`;
 
   // Fetch Notifikasi dari Backend
   const fetchNotifications = async () => {
@@ -89,7 +76,7 @@ export default function TopBar({ searchQuery, onSearch }) {
 
     const interval = setInterval(() => {
       fetchNotifications();
-    }, 30000);
+    }, 3000);
 
     const handleForceRefresh = () => fetchNotifications();
     window.addEventListener('notifikasi-updated', handleForceRefresh);
@@ -250,8 +237,8 @@ export default function TopBar({ searchQuery, onSearch }) {
           </div>
           <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-md">
             <img
-              src={ownerProfile}
-              alt="Owner"
+              src={userAvatar}
+              alt="Avatar"
               className="w-full h-full object-cover"
             />
           </div>

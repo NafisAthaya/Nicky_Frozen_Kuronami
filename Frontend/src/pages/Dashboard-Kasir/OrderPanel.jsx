@@ -82,15 +82,16 @@ export default function OrderPanel({
     <aside
         id="order-panel"
         className="
-      w-[360px]
+      w-[380px]
       h-full
       bg-white
       border-l
       border-gray-200
-      shadow-lg
+      shadow-2xl
       flex
       flex-col
       shrink-0
+      z-30
       "
 >
       {/* Header */}
@@ -116,11 +117,11 @@ export default function OrderPanel({
             <div
             key={item.id}
             id={`order-item-${item.id}`}
-            className="flex items-center gap-3 px-5 py-3 border-b border-gray-100 hover:bg-gray-50 transition"
+            className="flex items-center gap-3 mx-4 my-2.5 p-3 bg-white border border-gray-100 shadow-[0_2px_10px_-3px_rgba(0,0,0,0.05)] rounded-2xl hover:shadow-md hover:border-blue-100 transition-all duration-300"
             >
-              <div className="w-11 h-11 rounded-lg bg-gray-100 overflow-hidden shrink-0 flex items-center justify-center text-gray-400 text-xl">
+              <div className="w-14 h-14 rounded-xl bg-gray-50 overflow-hidden shrink-0 flex items-center justify-center text-gray-400 text-xl border border-gray-100">
                 {item.image ? (
-                  <img src={item.image} alt={item.name} />
+                  <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
                 ) : (
                   <HiOutlinePhotograph />
                 )}
@@ -128,41 +129,43 @@ export default function OrderPanel({
 
               <div className="flex-1 min-w-0">
                 <div
-                className="text-sm font-semibold text-gray-900 truncate"
+                className="text-sm font-bold text-gray-800 truncate mb-0.5"
                 title={item.name}
                 >
                   {item.name}
                 </div>
-                <div className="text-xs text-gray-500">
+                <div className="text-xs font-medium text-gray-400 mb-2">
                   {formatRupiah(item.price)} / pcs
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center bg-[#F5F7FB] rounded-full p-1 border border-gray-200">
+                    <button
+                      className="w-6 h-6 rounded-full flex items-center justify-center bg-white text-[#082B7A] font-bold shadow-sm hover:bg-blue-50 transition-colors"
+                      onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
+                      id={`qty-minus-${item.id}`}
+                    >
+                      −
+                    </button>
+                    <div className="w-6 flex items-center justify-center text-xs font-bold text-gray-700">{item.quantity}</div>
+                    <button
+                      className="w-6 h-6 rounded-full flex items-center justify-center bg-white text-[#082B7A] font-bold shadow-sm hover:bg-blue-50 transition-colors disabled:opacity-50"
+                      onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
+                      disabled={item.quantity >= item.stock}
+                      id={`qty-plus-${item.id}`}
+                    >
+                      +
+                    </button>
+                  </div>
+                  {item.stock > 0 && item.quantity >= item.stock && (
+                    <span className="text-[9px] font-bold text-red-500 bg-red-50 px-1.5 py-0.5 rounded-md">Max</span>
+                  )}
                 </div>
               </div>
 
-              <div className="text-right shrink-0">
-                <div className="text-sm font-bold text-gray-900 mb-2">
+              <div className="text-right shrink-0 self-start mt-1">
+                <div className="text-sm font-extrabold text-[#082B7A]">
                   {formatRupiah(item.price * item.quantity)}
                 </div>
-                <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden">
-                  <button
-                    className="w-7 h-7 flex items-center justify-center text-[#082B7A] font-bold hover:bg-gray-100"
-                    onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
-                    id={`qty-minus-${item.id}`}
-                  >
-                    −
-                  </button>
-                  <div className="w-8 h-7 flex items-center justify-center border-x border-gray-300 text-sm font-semibold">{item.quantity}</div>
-                  <button
-                    className="w-7 h-7 flex items-center justify-center text-[#082B7A] font-bold hover:bg-gray-100"
-                    onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
-                    disabled={item.quantity >= item.stock}
-                    id={`qty-plus-${item.id}`}
-                  >
-                    +
-                  </button>
-                </div>
-                {item.stock > 0 && item.quantity >= item.stock && (
-                  <div className="text-[10px] text-red-500 mt-1">Stok maks</div>
-                )}
               </div>
             </div>
           ))}
@@ -203,9 +206,9 @@ export default function OrderPanel({
             </span>
             </div>
           )}
-          <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-300">
-            <span className="text-gray-500">Total Tagihan</span>
-            <span className="text-4xl font-extrabold text-[#082B7A]">
+          <div className="flex flex-col mt-4 pt-4 border-t border-dashed border-gray-300 gap-1">
+            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Total Tagihan</span>
+            <span className="text-3xl font-black text-[#082B7A] tracking-tight">
             {formatRupiah(total)}
             </span>
           </div>
@@ -213,47 +216,44 @@ export default function OrderPanel({
       )}
 
       {/* Payment Methods */}
-      <div className="flex justify-center gap-4 px-5 py-3">
+      <div className="grid grid-cols-3 gap-3 px-5 py-3">
         {paymentMethods.map((method) => {
           const Icon = method.icon;
+          const isActive = activePayment === method.id;
           return (
             <button
               key={method.id}
-              className={`flex flex-col items-center gap-1 px-4 py-2 rounded-xl border transition
+              className={`flex flex-col items-center justify-center gap-1.5 h-16 rounded-2xl border-2 transition-all duration-300 cursor-pointer
             ${
-            activePayment === method.id
-                ? 'bg-blue-50 border-blue-500'
-                : 'border-gray-200 hover:bg-gray-50'
+              isActive
+                ? 'bg-blue-50/50 border-blue-600 text-blue-700 shadow-[0_0_15px_rgba(37,99,235,0.15)]'
+                : 'bg-white border-gray-100 text-gray-500 hover:border-gray-300 hover:bg-gray-50'
             }`}
               onClick={() => setActivePayment(method.id)}
               id={`payment-${method.id}`}
             >
-              <span className="text-xl text-gray-600">
+              <span className={`text-xl ${isActive ? 'text-blue-600' : 'text-gray-400'}`}>
                 <Icon />
               </span>
-              <span>{method.label}</span>
+              <span className="text-[10px] font-bold">{method.label}</span>
             </button>
           );
         })}
       </div>
 
       {/* Action Buttons */}
-      <div className="p-5 space-y-3">
-
-
-
+      <div className="px-5 pb-5 pt-2">
         <button
-          className="w-full h-12 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 disabled:opacity-50"
+          className="w-full h-14 bg-gradient-to-r from-[#FF7A00] to-[#FF5E00] hover:from-[#F06F00] hover:to-[#E05200] text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-[0_8px_20px_-6px_rgba(255,122,0,0.5)] hover:shadow-[0_10px_25px_-6px_rgba(255,122,0,0.6)] hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-50 disabled:pointer-events-none disabled:shadow-none disabled:translate-y-0"
           id="pay-button"
           disabled={items.length === 0}
           onClick={handlePayNow}
         >
-          Bayar Sekarang
-          <span className="text-lg">
+          <span className="text-lg">Bayar Sekarang</span>
+          <span className="text-xl">
             <HiArrowRight />
           </span>
         </button>
-
       </div>
 
       {showTunaiPopup && (

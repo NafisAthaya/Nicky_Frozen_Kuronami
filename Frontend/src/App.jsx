@@ -5,7 +5,7 @@ import { Toaster } from 'react-hot-toast';
 // Login & Branch
 import Login from './pages/Login/Login';
 import ResetPassword from './pages/Login/reset-password';
-import BranchSelection from './pages/BranchSelection/BranchSelection';
+//import BranchSelection from './pages/BranchSelection/BranchSelection';
 
 // Owner Layout
 import DashboardLayout from './components/layout/DashboardLayout';
@@ -110,12 +110,7 @@ export default function App() {
             }
         />
         <Route path="/reset-password" element={<ResetPassword />} />
-  
-        {/* ==================== RUTE PILIH CABANG ==================== */}
-        <Route
-            path="/"
-            element={<BranchSelection />}
-        />
+        
 
         {/* OWNER */}
         <Route

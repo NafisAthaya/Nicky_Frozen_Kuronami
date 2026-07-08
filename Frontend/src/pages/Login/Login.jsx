@@ -5,7 +5,7 @@ import Button from '../../components/ui/Button';
 import ForgotPasswordModal from './ForgotPasswordModal';
 import { Eye, EyeOff } from 'lucide-react';
 
-import bgLogin from '../../assets/login-bg.png';
+import bgLogin from '../../assets/login-bg.webp';
 import logoNicky from '../../assets/logo-nicky.png';
 
 // Import "Suntikan" API dan State Management

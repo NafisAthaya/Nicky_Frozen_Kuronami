@@ -12,27 +12,34 @@ class ProdukController extends Controller
     {
         $user = $request->user();
 
-        $query = Produk::with('batches');
+        $query = Produk::query();
 
-        // Filter berdasarkan cabang jika user sudah login
+        // Filter berdasarkan cabang
+        $cabangId = 1;
         if ($user) {
-            $cabangId = $user->cabang_id ?? 1; // Default ke cabang 1 (Utama) jika owner
-            $query->where('cabang_id', $cabangId);
+            $cabangId = $request->query('cabang_id') ?? $user->cabang_id ?? 1;
+            $query->whereHas('batches', function($q) use ($cabangId) {
+                $q->where('cabang_id', $cabangId);
+            });
+            $query->with(['batches' => function($q) use ($cabangId) {
+                $q->where('cabang_id', $cabangId);
+            }]);
+        } else {
+            $query->with('batches');
         }
 
         $produks = $query->get();
         
         $activeRules = collect();
         if ($user) {
-            $cabangId = $user->cabang_id ?? 1;
             $activeRules = \App\Models\DiskonRule::where('cabang_id', $cabangId)
                 ->where('is_active', true)
                 ->get();
         }
 
         $produks->transform(function ($produk) use ($activeRules) {
-            $produk->gambar = $produk->gambar
-                ? asset('storage/produk/' . $produk->gambar)
+            $produk->gambar = $produk->image
+                ? asset('storage/produk/' . $produk->image)
                 : null;
                 
             $hargaDiskon = $produk->harga_jual;
@@ -76,6 +83,13 @@ class ProdukController extends Controller
             $produk->is_discounted = $isDiscounted;
             $produk->persen_diskon = $persenDiskon;
 
+            // Calculate dynamic stok_total based only on the loaded batches for this branch
+            $stokCabang = 0;
+            foreach ($produk->batches as $batch) {
+                $stokCabang += $batch->stok;
+            }
+            $produk->stok_total = $stokCabang;
+
             return $produk;
         });
 
@@ -95,8 +109,10 @@ class ProdukController extends Controller
         $query = Produk::query();
 
         if ($request->user()) {
-            $cabangId = $request->user()->cabang_id ?? 1;
-            $query->where('cabang_id', $cabangId);
+            $cabangId = $request->query('cabang_id') ?? $request->user()->cabang_id ?? 1;
+            $query->whereHas('batches', function($q) use ($cabangId) {
+                $q->where('cabang_id', $cabangId);
+            });
         }
 
         $produk = $query->findOrFail($id);

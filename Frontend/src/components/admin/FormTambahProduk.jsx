@@ -83,8 +83,34 @@ export default function FormTambahProduk({
   const handleGambarChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setGambar(file);
-      setGambarPreview(URL.createObjectURL(file));
+      if (!file.type.startsWith('image/')) {
+        setError('Harap pilih file gambar');
+        return;
+      }
+      
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0);
+          
+          canvas.toBlob((blob) => {
+            if (blob) {
+              const webpFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", {
+                type: 'image/webp',
+              });
+              setGambar(webpFile);
+              setGambarPreview(URL.createObjectURL(webpFile));
+            }
+          }, 'image/webp', 0.8); // Kualitas 80%
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -92,13 +118,7 @@ export default function FormTambahProduk({
     e.preventDefault();
 
     if (!formData.nama_produk.trim()) return setError('Nama produk wajib diisi.');
-    if (!formData.sku.trim()) return setError('SKU wajib diisi.');
-    if (!formData.harga_beli) return setError('Harga beli wajib diisi.');
     if (!formData.kategori.trim()) return setError('Kategori wajib diisi.');
-
-    if (Number(formData.stok_total) > 0 && !formData.expired_date) {
-      return setError('Tanggal kedaluwarsa wajib diisi jika ada jumlah produk (stok).');
-    }
 
     setLoading(true);
     try {
@@ -112,13 +132,10 @@ export default function FormTambahProduk({
       
       payload.append('cabang_id', cabangId);
       payload.append('nama_produk', formData.nama_produk);
-      payload.append('sku', formData.sku);
-      payload.append('harga_beli', Number(formData.harga_beli));
-      payload.append('stok_total', Number(formData.stok_total));
-      payload.append('kategori', formData.kategori);
-      if (formData.expired_date) {
-        payload.append('expired_date', formData.expired_date);
+      if (formData.sku) {
+        payload.append('sku', formData.sku);
       }
+      payload.append('kategori', formData.kategori);
       if (formData.supplier) {
         payload.append('supplier', formData.supplier);
       }
@@ -211,7 +228,7 @@ export default function FormTambahProduk({
                   value={formData.sku}
                   onChange={(e) => handleChange('sku', e.target.value)}
                   className="w-full h-12 px-4 border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 focus:outline-none focus:border-[#082B7A] focus:ring-1 focus:ring-[#082B7A] transition-all"
-                  placeholder="Masukkan SKU/Barcode..."
+                  placeholder="Kosongkan untuk generate otomatis..."
                 />
               </div>
             </div>
@@ -245,53 +262,7 @@ export default function FormTambahProduk({
               )}
             </div>
 
-            {!isEditMode && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-bold text-[#082B7A] mb-2">Jumlah Produk</label>
-                  <input
-                    type="number"
-                    value={formData.stok_total}
-                    onFocus={() => {
-                      if (formData.stok_total === '0') handleChange('stok_total', '');
-                    }}
-                    onBlur={() => {
-                      if (formData.stok_total === '') handleChange('stok_total', '0');
-                    }}
-                    onChange={(e) => handleChange('stok_total', e.target.value)}
-                    className="w-full h-12 px-4 border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 focus:outline-none focus:border-[#082B7A] focus:ring-1 focus:ring-[#082B7A] transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-[#082B7A] mb-2">Tanggal Kedaluwarsa</label>
-                  <input
-                    type="date"
-                    value={formData.expired_date}
-                    onChange={(e) => handleChange('expired_date', e.target.value)}
-                    className="w-full h-12 px-4 border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 focus:outline-none focus:border-[#082B7A] focus:ring-1 focus:ring-[#082B7A] transition-all"
-                  />
-                </div>
-              </div>
-            )}
 
-            <div className="grid grid-cols-1 gap-4">
-              <div>
-                <label className="block text-sm font-bold text-[#082B7A] mb-2">Harga Beli</label>
-                <div className="flex overflow-hidden rounded-xl border border-gray-200 focus-within:border-[#082B7A] focus-within:ring-1 focus-within:ring-[#082B7A] transition-all">
-                  <span className="bg-gray-50 border-r border-gray-200 px-4 flex items-center justify-center font-bold text-gray-500 text-sm">Rp</span>
-                  <input
-                    type="text"
-                    value={formData.harga_beli ? Number(formData.harga_beli).toLocaleString('id-ID') : ''}
-                    onChange={(e) => {
-                      const rawValue = e.target.value.replace(/[^0-9]/g, '');
-                      handleChange('harga_beli', rawValue);
-                    }}
-                    className="flex-1 px-4 h-12 outline-none text-sm font-semibold text-gray-700"
-                    placeholder="0"
-                  />
-                </div>
-              </div>
-            </div>
 
             {error && (
               <div className="rounded-lg border-l-4 border-red-500 bg-red-50 p-3 text-sm text-red-600">

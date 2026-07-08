@@ -43,18 +43,19 @@ class DatabaseSeeder extends Seeder
             'nama_produk' => 'Sosis Sapi Bakar Premium 500g',
             'kategori' => 'Olahan Daging',
             'image' => null, 
-            'harga_beli' => 35000,
             'harga_jual' => 45000,
             'stok_total' => 0, // Nanti bertambah via tabel produk_batches
-            'cabang_id' => $cabangUtama->id,
         ]);
 
         ProdukBatch::create([
             'produk_id' => 1, // ID Sosis Sapi Bakar
+            'cabang_id' => $cabangUtama->id,
             'barcode_custom' => 'SS-1224-001', // Ini yang discan kasir nanti
             'stok' => 50,
             'expired_date' => '2026-12-31',
             'tanggal_masuk' => now(),
+            'harga_beli' => 35000,
+            'supplier' => 'PT Sumber Sosis',
         ]);
 
         // Update stok total di tabel produk

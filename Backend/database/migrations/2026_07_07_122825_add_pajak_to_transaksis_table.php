@@ -11,10 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('produk_batches', function (Blueprint $table) {
-            $table->decimal('harga_beli', 15, 2)->nullable();
-            $table->string('supplier')->nullable();
-            $table->text('catatan')->nullable();
+        Schema::table('transaksis', function (Blueprint $table) {
+            $table->decimal('pajak', 15, 2)->default(0)->after('diskon');
+            $table->decimal('pembulatan_donasi', 15, 2)->default(0)->after('pajak');
         });
     }
 
@@ -23,8 +22,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('produk_batches', function (Blueprint $table) {
-            $table->dropColumn(['harga_beli', 'supplier', 'catatan']);
+        Schema::table('transaksis', function (Blueprint $table) {
+            $table->dropColumn(['pajak', 'pembulatan_donasi']);
         });
     }
 };

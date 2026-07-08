@@ -78,10 +78,14 @@ export default function Notifikasi() {
     const handleSync = (e) => {
       setItems(e.detail);
     };
+    const handleGlobalSync = () => fetchNotifikasi();
+    
     window.addEventListener('topbar-notifications-fetched', handleSync);
+    window.addEventListener('global-sync', handleGlobalSync);
 
     return () => {
       window.removeEventListener('topbar-notifications-fetched', handleSync);
+      window.removeEventListener('global-sync', handleGlobalSync);
     };
   }, []);
 

@@ -1,348 +1,249 @@
-import { useState } from 'react';
-import {
-  MdCameraAlt,
-  MdManageAccounts,
-  MdImage,
-  MdSecurity,
-} from 'react-icons/md';
-
+import { useRef, useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
+import ownerProfile from '../../assets/OwnerProfile.png';
+import useAuthStore from '../../store/authStore';
 import SuccessModal from '../../components/admin/SuccessModal.jsx';
+import axiosInstance from '../../api/axios';
 
-function loadUserFromStorage() {
-  try {
-    const raw = localStorage.getItem('user');
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-}
+import {
+  HiOutlineCamera,
+  HiOutlineInformationCircle,
+  HiArrowLeft
+} from 'react-icons/hi';
 
 export default function Profil() {
-  const user = loadUserFromStorage();
-
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
-  const [showComingSoon, setShowComingSoon] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  
+  const user = useAuthStore((state) => state.user);
+  const updateUser = useAuthStore((state) => state.updateUser);
 
-  const [formData, setFormData] = useState({
-    nama: user?.name || 'Nicky Frozen',
-    email: user?.email || 'manager@nickyfrozen.com',
-    currentPassword: '',
-    newPassword: '',
+  const [photo, setPhoto] = useState(
+    user?.foto
+      ? `http://127.0.0.1:8000/storage/${user.foto}`
+      : ownerProfile
+  );
+  
+  const [selectedFile, setSelectedFile] = useState(null);
+
+  const fileInputRef = useRef(null);
+  const navigate = useNavigate();
+
+  const [profileForm, setProfileForm] = useState({
+    name: user?.name || '',
+    email: user?.email || ''
   });
 
-  const handleChange = (field, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+  useEffect(() => {
+    if (user) {
+      setProfileForm({
+        name: user.name || '',
+        email: user.email || ''
+      });
+    }
+  }, [user]);
+
+  const handleChoosePhoto = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const handlePhotoChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
 
-    // Ideally this would make an API call to update the backend profile
-    // For now, we update the local storage user object
-    if (user) {
-      const updatedUser = { ...user, name: formData.nama, email: formData.email };
-      localStorage.setItem('user', JSON.stringify(updatedUser));
-      // Dispatch an event so Sidebar and TopBar can re-render if they were listening
-      window.dispatchEvent(new Event('storage'));
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const webpFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", { type: "image/webp" });
+            setSelectedFile(webpFile);
+            setPhoto(URL.createObjectURL(webpFile));
+          }
+        }, 'image/webp', 0.8);
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSaving(true);
+    let success = false;
+    let updatedFoto = user?.foto;
+
+    // Update Profile Info
+    try {
+      await axiosInstance.put('/profile/update', {
+        name: profileForm.name,
+        email: profileForm.email,
+        phone: user?.phone || ''
+      });
+      success = true;
+    } catch (err) {
+      console.error(err);
+      toast.error('Gagal memperbarui data diri.');
+      setIsSaving(false);
+      return;
     }
 
-    setFormData((prev) => ({
-      ...prev,
-      currentPassword: '',
-      newPassword: '',
-    }));
+    if (selectedFile) {
+      const formData = new FormData();
+      formData.append("photo", selectedFile);
+      formData.append("user_id", user?.id);
 
-    setIsSuccessOpen(true);
+      try {
+        const response = await axiosInstance.post(
+          "/profile/photo",
+          formData,
+          {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+          }
+        );
+
+        const result = response.data;
+        updatedFoto = result.path;
+      } catch (err) {
+        console.error(err);
+        toast.error(err.response?.data?.message || 'Gagal mengunggah foto. Silakan coba lagi.');
+        setIsSaving(false);
+        return;
+      }
+    }
+
+    if (success) {
+      if (user) {
+        updateUser({ ...user, name: profileForm.name, email: profileForm.email, foto: updatedFoto });
+      }
+      setIsSuccessOpen(true);
+    }
+    setIsSaving(false);
   };
 
+  // Format data user
+  const userRole = user?.role || 'admin';
+  const userId = user?.id ? `ADM-${String(user.id).padStart(4, '0')}` : '-';
+
   return (
-    <div className="max-w-4xl mx-auto p-6">
-
-      {/* HEADER */}
-      <div className="flex items-center gap-6 mb-8">
-
-        <div className="relative">
-
-          <div className="w-32 h-32 rounded-full bg-blue-100 border-4 border-white shadow flex items-center justify-center overflow-hidden">
-            <MdImage
-              size={48}
-              className="text-[#082B7A] opacity-50"
-            />
-          </div>
-
-          <button
-            className="
-              absolute bottom-0 right-0
-              w-9 h-9 rounded-full
-              bg-orange-500 text-white
-              border-2 border-white
-              flex items-center justify-center
-              hover:bg-orange-600 transition
-            "
-          >
-            <MdCameraAlt />
-          </button>
-
-        </div>
-
-        <div>
-          <h1 className="text-4xl font-extrabold text-[#082B7A]">
-            {formData.nama}
-          </h1>
-
-          <p className="text-gray-500 mt-1 capitalize">
-            Admin
-          </p>
-        </div>
-
+    <div className="flex flex-col flex-1 min-h-screen overflow-y-auto p-6 md:p-8 bg-[#F5F7FB]">
+      {/* Header with Back Button */}
+      <div className="mb-6">
+        <button
+          onClick={() => navigate('/admin')}
+          className="flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-800 mb-3 px-3 py-2 rounded-xl hover:bg-blue-50 transition-all -ml-2"
+        >
+          <HiArrowLeft className="text-lg" /> Kembali ke Dashboard
+        </button>
+        <h1 className="text-3xl font-extrabold text-[#082B7A] mb-1">Profil Admin</h1>
+        <p className="text-sm text-gray-500">Kelola informasi akun dan foto profil Anda.</p>
       </div>
 
-      {/* CARD */}
-      <div className="bg-white border border-gray-200 rounded-3xl p-8 shadow-sm">
-
-        {/* TITLE */}
-        <div className="flex items-center gap-3 mb-8">
-
-          <MdManageAccounts
-            size={28}
-            className="text-[#082B7A]"
-          />
-
-          <h2 className="text-2xl font-bold text-[#082B7A]">
-            Pengaturan Akun Pribadi
-          </h2>
-
-        </div>
-
-        <form onSubmit={handleSubmit}>
-
-          {/* NAMA */}
-          <div className="mb-6">
-
-            <label className="block mb-2 font-semibold text-[#082B7A]">
-              Nama Lengkap
-            </label>
-
-            <input
-              type="text"
-              value={formData.nama}
-              onChange={(e) =>
-                handleChange(
-                  'nama',
-                  e.target.value
-                )
-              }
-              className="
-                w-full h-12 px-4
-                border border-gray-300
-                rounded-xl
-                focus:outline-none
-                focus:ring-2
-                focus:ring-blue-200
-              "
-            />
-
-          </div>
-
-          {/* EMAIL */}
-          <div className="mb-6">
-
-            <label className="block mb-2 font-semibold text-[#082B7A]">
-              Alamat Email
-            </label>
-
-            <input
-              type="email"
-              value={formData.email}
-              onChange={(e) =>
-                handleChange(
-                  'email',
-                  e.target.value
-                )
-              }
-              className="
-                w-full h-12 px-4
-                border border-gray-300
-                rounded-xl
-                focus:outline-none
-                focus:ring-2
-                focus:ring-blue-200
-              "
-            />
-
-          </div>
-
-          {/* PASSWORD */}
-          <h3 className="text-sm font-extrabold text-[#082B7A] uppercase tracking-wide mb-4 mt-8">
-            Ubah Kata Sandi
-          </h3>
-
-          <div className="mb-6">
-
-            <label className="block mb-2 font-semibold text-[#082B7A]">
-              Kata Sandi Saat Ini
-            </label>
-
-            <input
-              type="password"
-              placeholder="Masukkan kata sandi saat ini"
-              value={formData.currentPassword}
-              onChange={(e) =>
-                handleChange(
-                  'currentPassword',
-                  e.target.value
-                )
-              }
-              className="
-                w-full h-12 px-4
-                border border-gray-300
-                rounded-xl
-              "
-            />
-
-          </div>
-
-          <div className="mb-6">
-
-            <label className="block mb-2 font-semibold text-[#082B7A]">
-              Kata Sandi Baru
-            </label>
-
-            <input
-              type="password"
-              placeholder="Minimal 8 karakter"
-              value={formData.newPassword}
-              onChange={(e) =>
-                handleChange(
-                  'newPassword',
-                  e.target.value
-                )
-              }
-              className="
-                w-full h-12 px-4
-                border border-gray-300
-                rounded-xl
-              "
-            />
-
-          </div>
-
-          {/* SECURITY */}
-          <h3 className="text-sm font-extrabold text-[#082B7A] uppercase tracking-wide mb-4 mt-8">
-            Keamanan Akun
-          </h3>
-
-          <div className="
-            flex items-center justify-between
-            bg-blue-50 rounded-2xl
-            p-5 mb-8
-          ">
-
-            <div className="flex gap-4">
-
-              <MdSecurity
-                size={30}
-                className="text-[#082B7A]"
-              />
-
-              <div>
-
-                <h4 className="font-bold text-[#082B7A]">
-                  Verifikasi Dua Langkah
-                </h4>
-
-                <p className="text-sm text-gray-600">
-                  Amankan akun Anda dengan
-                  lapisan keamanan tambahan.
-                </p>
-
+      <form onSubmit={handleSubmit} className="flex flex-col xl:flex-row gap-6 items-start">
+        {/* Left Panel: Informasi Data Diri */}
+        <div className="flex-[2] min-w-0 xl:min-w-[500px] bg-white border border-gray-200 rounded-3xl p-6 shadow-sm">
+          <h2 className="text-xl font-bold text-[#082B7A] mb-6">Informasi Data Diri</h2>
+          
+          <div className="flex flex-col md:flex-row gap-8">
+            {/* Avatar Section */}
+            <div className="flex flex-col items-center gap-4 w-[140px] shrink-0">
+              <div className="w-28 h-28 rounded-full overflow-hidden border-4 border-white shadow-lg ring-2 ring-blue-100">
+                <img
+                  src={photo}
+                  alt="Foto Profil"
+                  className="w-full h-full object-cover"
+                />
               </div>
+              <button
+                type="button"
+                onClick={handleChoosePhoto}
+                className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-xl font-semibold text-sm hover:bg-blue-700 transition-all shadow-md hover:shadow-lg"
+              >
+                <HiOutlineCamera className="text-lg" />
+                Ubah Foto
+              </button>
 
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={handlePhotoChange}
+              />
             </div>
 
-            <button
-              type="button"
-              onClick={() => setShowComingSoon(true)}
-              className="
-                font-bold text-[#082B7A]
-                hover:underline
-              "
-            >
-              Aktifkan
-            </button>
+            {/* Form Section */}
+            <div className="flex-1 flex flex-col gap-4">
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-semibold text-gray-500">Nama Lengkap</label>
+                <input
+                  type="text"
+                  value={profileForm.name}
+                  onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
+                  className="px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-800 font-medium focus:ring-2 focus:ring-blue-100 outline-none"
+                />
+              </div>
+              
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-semibold text-gray-500">Alamat Email</label>
+                <input
+                  type="email"
+                  value={profileForm.email}
+                  onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
+                  className="px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-800 font-medium focus:ring-2 focus:ring-blue-100 outline-none"
+                />
+              </div>
 
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-semibold text-gray-500">ID Karyawan / Role</label>
+                <input 
+                  type="text" 
+                  value={`${userId} - ${userRole.charAt(0).toUpperCase() + userRole.slice(1)}`} 
+                  readOnly 
+                  className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 font-medium cursor-not-allowed" 
+                />
+              </div>
+
+              {/* Info Note */}
+              <div className="flex gap-3 p-4 bg-blue-50 rounded-xl mt-2">
+                <HiOutlineInformationCircle className="text-blue-500 text-xl shrink-0 mt-0.5" />
+                <p className="text-xs text-[#082B7A] leading-relaxed">Admin dapat memperbarui nama, email, dan foto profil.</p>
+              </div>
+
+              {/* BUTTON SIMPAN */}
+              <div className="flex justify-end mt-4">
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="bg-[#082B7A] text-white px-8 h-12 rounded-xl font-semibold hover:bg-[#0B3B91] transition shadow-md disabled:opacity-50"
+                >
+                  {isSaving ? 'Menyimpan...' : 'Simpan Perubahan'}
+                </button>
+              </div>
+            </div>
           </div>
-
-          {/* BUTTON */}
-          <div className="flex justify-end">
-
-            <button
-              type="submit"
-              className="
-                bg-[#082B7A]
-                text-white
-                px-8 h-12
-                rounded-xl
-                font-semibold
-                hover:bg-[#0B3B91]
-                transition
-              "
-            >
-              Simpan Perubahan
-            </button>
-
-          </div>
-
-        </form>
-
-      </div>
-
-      {/* FOOTER */}
-      <footer className="text-center text-gray-400 text-sm mt-8">
-        © 2026 Nicky Frozen. All rights reserved.
-      </footer>
+        </div>
+      </form>
 
       <SuccessModal
         isOpen={isSuccessOpen}
-        onClose={() =>
-          setIsSuccessOpen(false)
-        }
+        onClose={() => setIsSuccessOpen(false)}
         title="Profil Berhasil Diperbarui"
         description="Perubahan informasi akun Anda telah berhasil disimpan."
         buttonText="Selesai"
       />
-
-      {/* Coming Soon Modal */}
-      {showComingSoon && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[100]">
-          <div className="bg-white rounded-3xl w-[400px] p-8 shadow-2xl text-center">
-
-            <div className="w-20 h-20 rounded-full bg-blue-50 border-2 border-blue-100 flex items-center justify-center mx-auto mb-5">
-              <MdSecurity size={40} className="text-[#082B7A]" />
-            </div>
-
-            <h3 className="text-xl font-bold text-[#082B7A] mb-2">
-              Segera Hadir!
-            </h3>
-
-            <p className="text-sm text-gray-500 leading-relaxed mb-6">
-              Fitur Verifikasi Dua Langkah melalui <strong>Gmail</strong> atau <strong>WhatsApp</strong> sedang dalam tahap pengembangan dan akan segera tersedia di pembaruan berikutnya.
-            </p>
-
-            <button
-              onClick={() => setShowComingSoon(false)}
-              className="w-full py-3 bg-[#082B7A] text-white rounded-xl font-semibold hover:bg-[#0B3B91] transition"
-            >
-              Mengerti
-            </button>
-
-          </div>
-        </div>
-      )}
-
     </div>
   );
 }

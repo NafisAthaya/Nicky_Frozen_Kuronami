@@ -69,6 +69,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Cabang
         Route::get('/cabang', [CabangController::class, 'index']);
+        Route::post('/cabang', [CabangController::class, 'store']);
+        Route::put('/cabang/{id}/toggle', [CabangController::class, 'toggle']);
+        Route::delete('/cabang/{id}', [CabangController::class, 'destroy']);
 
         // Kategori
         Route::get('/kategoris', [App\Http\Controllers\Api\KategoriController::class, 'index']);

@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react';
 import { HiOutlineDocumentText, HiOutlinePrinter } from 'react-icons/hi';
 import PopupStruk from './PopupStruk';
 import axiosInstance from '../../api/axios';
+import { useOutletContext } from 'react-router-dom';
 
 // Dynamic filters will be generated inside the component
 
 export default function RiwayatTransaksi({ transactions }) {
+  const { globalSearch } = useOutletContext();
   const [activeFilter, setActiveFilter] = useState('Semua Waktu');
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [transactionsData, setTransactionsData] = useState([]);
@@ -76,26 +78,32 @@ export default function RiwayatTransaksi({ transactions }) {
     }).format(amount);
   };
 
-  const sourceTransactions = transactionsData;
-
   // Note 9: Filter transactions by time range
-  const displayTransactions = sourceTransactions.filter((trx) => {
-    if (activeFilter === 'Semua Waktu') return true;
+  const displayTransactions = transactionsData.filter((trx) => {
+    let timeMatch = true;
+    if (activeFilter !== 'Semua Waktu') {
+      const [startStr, endStr] = activeFilter.split(' - ');
+      const [startH, startM] = startStr.split(':').map(Number);
+      const [endH, endM] = endStr.split(':').map(Number);
 
-    const [startStr, endStr] = activeFilter.split(' - ');
-    const [startH, startM] = startStr.split(':').map(Number);
-    const [endH, endM] = endStr.split(':').map(Number);
+      const startMinutes = startH * 60 + startM;
+      const endMinutes = endH * 60 + endM;
 
-    const startMinutes = startH * 60 + startM;
-    const endMinutes = endH * 60 + endM;
+      const rawTime = String(trx.time).replace(/\./g, ':');
+      const [trxH, trxM] = rawTime.split(':').map(Number);
+      const trxMinutes = trxH * 60 + (trxM || 0);
 
-    const rawTime = String(trx.time).replace(/\./g, ':');
-    const [trxH, trxM] = rawTime.split(':').map(Number);
-    const trxMinutes = trxH * 60 + (trxM || 0);
+      timeMatch = trxMinutes >= startMinutes && trxMinutes < endMinutes;
+    }
 
-    return trxMinutes >= startMinutes && trxMinutes < endMinutes;
+    let searchMatch = true;
+    if (globalSearch) {
+      const q = globalSearch.toLowerCase();
+      searchMatch = trx.id.toLowerCase().includes(q) || trx.items.toLowerCase().includes(q);
+    }
+
+    return timeMatch && searchMatch;
   });
-
   return (
     <div className="p-6 flex flex-col gap-6 h-full overflow-y-auto">
       <div>

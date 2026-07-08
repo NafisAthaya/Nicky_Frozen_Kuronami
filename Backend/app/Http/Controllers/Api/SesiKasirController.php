@@ -24,14 +24,26 @@ class SesiKasirController extends Controller
 
         $user = $request->user();
 
+        // Parse waktu mulai dengan aman
+        $waktuMulai = now()->subHours(8);
+        if ($request->waktu_buka) {
+            try {
+                $waktuMulai = \Carbon\Carbon::parse($request->waktu_buka);
+            } catch (\Exception $e) {
+                // Biarkan fallback ke subHours(8)
+            }
+        }
+
         $sesi = SesiKasir::create([
             'user_id' => $user ? $user->id : 1,
             'cabang_id' => ($user && $user->cabang_id) ? $user->cabang_id : 1,
             'nama_shift' => $request->nama_shift,
-            'waktu_mulai' => $request->waktu_buka ? \Carbon\Carbon::parse($request->waktu_buka) : now()->subHours(8), // fallback
+            'waktu_mulai' => $waktuMulai,
             'waktu_selesai' => \Carbon\Carbon::parse($request->waktu_tutup),
-            'tunai_sistem' => $request->saldo_akhir_sistem,
-            'tunai_laci' => $request->saldo_aktual,
+            'modal_awal' => $request->saldo_awal,
+            'total_penjualan' => $request->total_penjualan,
+            'total_pengeluaran' => $request->total_pengeluaran,
+            'uang_akhir' => $request->saldo_aktual,
             'selisih' => $request->selisih,
             'status' => 'selesai',
         ]);

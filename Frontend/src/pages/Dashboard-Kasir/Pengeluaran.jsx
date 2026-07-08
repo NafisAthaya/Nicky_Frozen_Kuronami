@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import axiosInstance from '../../api/axios';
+import { useOutletContext } from 'react-router-dom';
 
 import {
   HiOutlineCash,
@@ -48,6 +49,7 @@ import {
   }
 
 export default function Pengeluaran() {
+  const { globalSearch } = useOutletContext();
   const [namaBiaya, setNamaBiaya] = useState('');
   const [nominal, setNominal] = useState('');
   const [showToast, setShowToast] = useState(false);
@@ -79,7 +81,15 @@ export default function Pengeluaran() {
 };
 
   // Calculate total
-  const totalPengeluaran = expenses.reduce((sum, item) => sum + item.nominal, 0);
+  const filteredExpenses = expenses.filter(item => {
+    if (globalSearch) {
+      const q = globalSearch.toLowerCase();
+      return item.nama.toLowerCase().includes(q) || item.kategori.toLowerCase().includes(q);
+    }
+    return true;
+  });
+
+  const totalPengeluaran = filteredExpenses.reduce((sum, item) => sum + item.nominal, 0);
 
   useEffect(() => {
     loadExpenses();
@@ -240,7 +250,7 @@ try {
             </div>
           </div>
 
-          {expenses.length === 0 ? (
+          {filteredExpenses.length === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center text-gray-400 gap-2">
               <HiOutlineCash className="text-6xl opacity-40" />
               <p>Belum ada pengeluaran hari ini</p>
@@ -248,7 +258,7 @@ try {
             </div>
           ) : (
             <div className="flex-1 overflow-y-auto">
-              {expenses.map((item) => {
+              {filteredExpenses.map((item) => {
 
                 return (
                   <div

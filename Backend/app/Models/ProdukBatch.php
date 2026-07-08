@@ -13,6 +13,7 @@ class ProdukBatch extends Model
 
     protected $fillable = [
         'produk_id',
+        'cabang_id',
         'barcode_custom',
         'stok',
         'expired_date',
@@ -29,6 +30,11 @@ class ProdukBatch extends Model
 
     public function produk()
     {
-        return $this->belongsTo(Produk::class);
+        return $this->belongsTo(Produk::class)->withTrashed();
+    }
+
+    public function cabang()
+    {
+        return $this->belongsTo(Cabang::class);
     }
 }

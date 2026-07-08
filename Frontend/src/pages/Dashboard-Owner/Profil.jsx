@@ -1,13 +1,23 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axiosInstance from '../../api/axios';
 import useAuthStore from '../../store/authStore';
-import { HiEye, HiEyeOff } from 'react-icons/hi';
+import { HiEye, HiEyeOff, HiOutlineCamera } from 'react-icons/hi';
 import WarningModal from '../../components/admin/WarningModal';
+import ownerProfile from '../../assets/OwnerProfile.png';
 
 export default function Profil() {
   const { user, updateUser } = useAuthStore();
   const [activeTab, setActiveTab] = useState('profil');
   const [isLoading, setIsLoading] = useState(true);
+
+  // State Photo
+  const [photo, setPhoto] = useState(
+    user?.foto
+      ? `http://127.0.0.1:8000/storage/${user.foto}`
+      : ownerProfile
+  );
+  const [selectedFile, setSelectedFile] = useState(null);
+  const fileInputRef = useRef(null);
 
   // --- STATE TAB 1: PROFIL SAYA ---
   const [profileForm, setProfileForm] = useState({
@@ -114,26 +124,81 @@ export default function Profil() {
   }, [user, activeTab]);
 
   // --- HANDLERS PROFIL & KEAMANAN ---
+  const handleChoosePhoto = () => {
+    if (fileInputRef.current) fileInputRef.current.click();
+  };
+
+  const handlePhotoChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const webpFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", { type: "image/webp" });
+            setSelectedFile(webpFile);
+            setPhoto(URL.createObjectURL(webpFile));
+          }
+        }, 'image/webp', 0.8);
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
     setIsSavingProfile(true);
+    let success = false;
+    let updatedFoto = user?.foto;
+    const updatedName = `${profileForm.firstName} ${profileForm.lastName}`.trim();
+
     try {
-      const updatedName = `${profileForm.firstName} ${profileForm.lastName}`.trim();
       await axiosInstance.put('/profile/update', {
         name: updatedName,
         email: profileForm.email,
         phone: profileForm.phone
       });
-      // Update global store
-      if(user) {
-        updateUser({ ...user, name: updatedName, email: profileForm.email, phone: profileForm.phone });
-      }
-      showToast('Profil berhasil diperbarui!', 'success');
+      success = true;
     } catch (error) {
       showToast('Gagal memperbarui profil.', 'error');
-    } finally {
       setIsSavingProfile(false);
+      return;
     }
+
+    if (selectedFile) {
+      const formData = new FormData();
+      formData.append("photo", selectedFile);
+      formData.append("user_id", user?.id);
+
+      try {
+        const response = await axiosInstance.post("/profile/photo", formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        updatedFoto = response.data.path;
+      } catch (err) {
+        showToast(err.response?.data?.message || 'Gagal mengunggah foto. Silakan coba lagi.', 'error');
+        setIsSavingProfile(false);
+        return;
+      }
+    }
+
+    if (success) {
+      if(user) {
+        updateUser({ ...user, name: updatedName, email: profileForm.email, phone: profileForm.phone, foto: updatedFoto });
+      }
+      showToast('Profil berhasil diperbarui!', 'success');
+    }
+    setIsSavingProfile(false);
   };
 
   const handleUpdatePassword = async (e) => {
@@ -300,11 +365,32 @@ export default function Profil() {
         <div className="bg-white rounded-3xl border border-slate-100 p-8 shadow-sm flex flex-col md:flex-row gap-12 items-start">
           <div className="flex flex-col items-center gap-4 shrink-0 md:w-1/4">
             <div className="relative">
-              <div className="w-32 h-32 rounded-full bg-blue-600 text-white flex items-center justify-center text-4xl font-black shadow-lg shadow-blue-200 border-4 border-white">
-                {userInitials}
+              <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-white shadow-lg ring-2 ring-blue-100 bg-blue-600 flex items-center justify-center">
+                {photo && photo !== ownerProfile ? (
+                  <img src={photo} alt="Profil" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-white text-4xl font-black">{userInitials}</span>
+                )}
               </div>
             </div>
-            <div className="text-center">
+            
+            <button
+              type="button"
+              onClick={handleChoosePhoto}
+              className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-xl font-semibold text-sm hover:bg-blue-700 transition-all shadow-md hover:shadow-lg mt-2"
+            >
+              <HiOutlineCamera className="text-lg" />
+              Ubah Foto
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              hidden
+              onChange={handlePhotoChange}
+            />
+
+            <div className="text-center mt-2">
               <h2 className="text-xl font-bold text-slate-800">{user?.name || 'Loading...'}</h2>
               <span className="inline-block mt-1 bg-blue-50 text-blue-600 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest">
                 {user?.role || 'OWNER'}
@@ -468,9 +554,17 @@ export default function Profil() {
                 {filteredKaryawan.length > 0 ? filteredKaryawan.map(k => (
                   <tr key={k.id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-6 py-4 flex items-center gap-4">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0 ${k.role === 'admin' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600'}`}>
-                        {k.name.substring(0,2).toUpperCase()}
-                      </div>
+                      {k.foto ? (
+                        <img 
+                          src={`http://127.0.0.1:8000/storage/${k.foto}`} 
+                          alt={k.name} 
+                          className="w-10 h-10 rounded-full object-cover shrink-0 border-2 border-white shadow-sm"
+                        />
+                      ) : (
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0 ${k.role === 'admin' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600'}`}>
+                          {k.name.substring(0,2).toUpperCase()}
+                        </div>
+                      )}
                       <div>
                         <p className="text-sm font-bold text-slate-800">{k.name}</p>
                         <p className="text-[10px] text-slate-400 mt-0.5">{k.email} &bull; {k.phone || '-'}</p>

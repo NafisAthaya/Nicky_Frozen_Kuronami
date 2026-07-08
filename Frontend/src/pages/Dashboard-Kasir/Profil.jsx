@@ -1,8 +1,9 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import ownerProfile from '../../assets/OwnerProfile.png';
 import useAuthStore from '../../store/authStore';
+import axiosInstance from '../../api/axios';
 
 import {
   HiOutlineCamera,
@@ -13,6 +14,7 @@ import {
 
 export default function Profil() {
   const [showSuccess, setShowSuccess] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   
   const user = useAuthStore((state) => state.user);
   const updateUser = useAuthStore((state) => state.updateUser);
@@ -23,8 +25,24 @@ export default function Profil() {
       : ownerProfile
   );
 
+  const [selectedFile, setSelectedFile] = useState(null);
+
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
+
+  const [profileForm, setProfileForm] = useState({
+    name: user?.name || '',
+    email: user?.email || ''
+  });
+
+  useEffect(() => {
+    if (user) {
+      setProfileForm({
+        name: user.name || '',
+        email: user.email || ''
+      });
+    }
+  }, [user]);
 
   const handleChoosePhoto = () => {
     if (fileInputRef.current) {
@@ -32,50 +50,93 @@ export default function Profil() {
     }
   };
 
-  const handlePhotoChange = async (e) => {
+  const handlePhotoChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    const formData = new FormData();
-    formData.append("photo", file);
-    formData.append("user_id", user?.id);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const webpFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", { type: "image/webp" });
+            setSelectedFile(webpFile);
+            setPhoto(URL.createObjectURL(webpFile));
+          }
+        }, 'image/webp', 0.8);
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  };
 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSaving(true);
+    let success = false;
+    let updatedFoto = user?.foto;
+
+    // Update Profile Info
     try {
-      const response = await fetch(
-        "http://127.0.0.1:8000/api/profile/photo",
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        toast.error(result.message || "Upload gagal");
-        return;
-      }
-
-      setPhoto(result.photo);
-
-      // Sync ke authStore & localStorage
-      if (user) {
-        updateUser({ ...user, foto: result.path });
-      }
-
-      setShowSuccess(true);
-      setTimeout(() => setShowSuccess(false), 2500);
-
+      await axiosInstance.put('/profile/update', {
+        name: profileForm.name,
+        email: profileForm.email,
+        phone: user?.phone || ''
+      });
+      success = true;
     } catch (err) {
       console.error(err);
-      toast.error('Gagal mengunggah foto. Silakan coba lagi.');
+      toast.error('Gagal memperbarui data diri.');
+      setIsSaving(false);
+      return;
     }
+
+    if (selectedFile) {
+      const formData = new FormData();
+      formData.append("photo", selectedFile);
+      formData.append("user_id", user?.id);
+
+      try {
+        const response = await axiosInstance.post(
+          "/profile/photo",
+          formData,
+          {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+          }
+        );
+
+        const result = response.data;
+        updatedFoto = result.path;
+      } catch (err) {
+        console.error(err);
+        toast.error('Gagal mengunggah foto. Silakan coba lagi.');
+        setIsSaving(false);
+        return;
+      }
+    }
+
+    if (success) {
+      if (user) {
+        updateUser({ ...user, name: profileForm.name, email: profileForm.email, foto: updatedFoto });
+      }
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 2500);
+    }
+    setIsSaving(false);
   };
 
   // Ambil nama cabang dari data user
   const cabangName = user?.cabang?.nama_cabang || user?.cabang_nama || 'Belum Ditentukan';
   const userRole = user?.role || 'kasir';
-  const userName = user?.name || 'Loading...';
   const userId = user?.id ? `KSR-${String(user.id).padStart(4, '0')}` : '-';
 
   return (
@@ -92,7 +153,7 @@ export default function Profil() {
         <p className="text-sm text-gray-500">Kelola informasi akun dan foto profil Anda.</p>
       </div>
 
-      <div className="flex flex-col xl:flex-row gap-6 items-start">
+      <form onSubmit={handleSubmit} className="flex flex-col xl:flex-row gap-6 items-start">
         {/* Left Panel: Informasi Data Diri */}
         <div className="flex-[2] min-w-0 xl:min-w-[500px] bg-white border border-gray-200 rounded-3xl p-6 shadow-sm">
           <h2 className="text-xl font-bold text-[#082B7A] mb-6">Informasi Data Diri</h2>
@@ -131,9 +192,19 @@ export default function Profil() {
                 <label className="text-xs font-semibold text-gray-500">Nama Lengkap</label>
                 <input
                   type="text"
-                  value={userName}
-                  readOnly
-                  className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 font-medium cursor-not-allowed"
+                  value={profileForm.name}
+                  onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
+                  className="px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-800 font-medium focus:ring-2 focus:ring-blue-100 outline-none"
+                />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-semibold text-gray-500">Alamat Email</label>
+                <input
+                  type="email"
+                  value={profileForm.email}
+                  onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
+                  className="px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-800 font-medium focus:ring-2 focus:ring-blue-100 outline-none"
                 />
               </div>
               
@@ -160,11 +231,23 @@ export default function Profil() {
               {/* Info Note */}
               <div className="flex gap-3 p-4 bg-blue-50 rounded-xl mt-2">
                 <HiOutlineInformationCircle className="text-blue-500 text-xl shrink-0 mt-0.5" />
-                <p className="text-xs text-[#082B7A] leading-relaxed">Data diri hanya dapat diubah oleh Owner. Kasir hanya dapat memperbarui foto profil.</p>
+                <p className="text-xs text-[#082B7A] leading-relaxed">Kasir dapat memperbarui nama, email, dan foto profil.</p>
+              </div>
+
+              {/* BUTTON SIMPAN */}
+              <div className="flex justify-end mt-4">
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="bg-[#082B7A] text-white px-8 h-12 rounded-xl font-semibold hover:bg-[#0B3B91] transition shadow-md disabled:opacity-50"
+                >
+                  {isSaving ? 'Menyimpan...' : 'Simpan Perubahan'}
+                </button>
               </div>
             </div>
           </div>
         </div>
+      </form>
 
       {/* ===== Success Modal ===== */}
         {showSuccess && (
@@ -181,7 +264,6 @@ export default function Profil() {
             </div>
         )}
 
-    </div>
     </div>
   );
 }

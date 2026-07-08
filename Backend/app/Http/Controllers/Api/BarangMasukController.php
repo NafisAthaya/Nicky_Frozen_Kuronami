@@ -29,6 +29,7 @@ class BarangMasukController extends Controller
             'produk_id' => 'required|exists:produks,id',
             'stok' => 'required|integer|min:1',
             'expired_date' => 'required|date',
+            'harga_beli' => 'required|numeric|min:0',
         ]);
 
         // Mulai Database Transaction untuk keamanan data
@@ -56,10 +57,14 @@ class BarangMasukController extends Controller
             // 4. Masukkan ke tabel Produk Batch
             $batch = ProdukBatch::create([
                 'produk_id' => $produk->id,
+                'cabang_id' => $request->cabang_id ?? $user->cabang_id ?? 1,
                 'barcode_custom' => $barcodeCustom,
                 'stok' => $request->stok,
                 'expired_date' => $request->expired_date,
                 'tanggal_masuk' => now()->toDateString(),
+                'harga_beli' => $request->harga_beli,
+                'supplier' => $request->supplier,
+                'catatan' => $request->catatan,
             ]);
 
             // 5. Update otomatis Stok Total di tabel induk Produk
