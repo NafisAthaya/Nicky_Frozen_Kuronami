@@ -34,10 +34,12 @@ const getNotifStyle = (type) => {
         bg: 'bg-green-100 text-green-600',
         icon: <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
       };
-    default: // info
+    case 'info':
+    case 'pengajuan_stok':
+    default: // pending / menunggu
       return {
         bg: 'bg-blue-100 text-blue-600',
-        icon: <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+        icon: <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
       };
   }
 };
@@ -197,10 +199,14 @@ export default function TopBar({ searchQuery, onSearch }) {
 
         {/* Sinkronisasi Global */}
         <button 
-          onClick={() => {
+          onClick={async () => {
             if (isSyncing) return;
             setIsSyncing(true);
+            // Dispatch event global agar semua halaman/komponen me-refresh datanya
             window.dispatchEvent(new Event('global-sync'));
+            // Refresh notifikasi TopBar juga
+            await fetchNotifications();
+            // Tampilkan toast sinkronisasi
             setSyncToast(true);
             setTimeout(() => {
               setIsSyncing(false);

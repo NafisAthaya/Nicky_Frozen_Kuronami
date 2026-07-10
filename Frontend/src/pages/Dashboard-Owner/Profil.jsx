@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import axiosInstance from '../../api/axios';
 import useAuthStore from '../../store/authStore';
 import { HiEye, HiEyeOff, HiOutlineCamera } from 'react-icons/hi';
@@ -7,8 +8,21 @@ import ownerProfile from '../../assets/OwnerProfile.png';
 
 export default function Profil() {
   const { user, updateUser } = useAuthStore();
-  const [activeTab, setActiveTab] = useState('profil');
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTab = searchParams.get('tab') || 'profil';
+  const editEmail = searchParams.get('edit_email');
+  
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Sync activeTab jika URL parameter berubah tanpa re-mount
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && tab !== activeTab) {
+      setActiveTab(tab);
+    }
+  }, [searchParams, activeTab]);
 
   // State Photo
   const [photo, setPhoto] = useState(
@@ -105,6 +119,16 @@ export default function Profil() {
 
         const resKaryawan = await axiosInstance.get('/owner/karyawan');
         setKaryawanList(resKaryawan.data.data || []);
+        
+        
+        // Cek jika editEmail langsung diinisialisasi
+        if (editEmail && activeTab === 'karyawan' && resKaryawan.data.data) {
+          const userToEdit = resKaryawan.data.data.find(k => k.email === editEmail);
+          if (userToEdit) {
+            handleOpenEdit(userToEdit);
+            setSearchParams({ tab: 'karyawan' }, { replace: true });
+          }
+        }
       } catch (error) {
         console.error("Gagal menarik data profil/karyawan:", error);
       } finally {
@@ -121,7 +145,18 @@ export default function Profil() {
     const handleGlobalSync = () => { if (activeTab === 'karyawan') fetchAllData(); };
     window.addEventListener('global-sync', handleGlobalSync);
     return () => window.removeEventListener('global-sync', handleGlobalSync);
-  }, [user, activeTab]);
+  }, [user, activeTab]); // Hapus editEmail dari dep agar tidak fetch ulang
+
+  // Auto-open edit modal terpisah untuk merespon perubahan URL secara reaktif
+  useEffect(() => {
+    if (editEmail && activeTab === 'karyawan' && karyawanList.length > 0) {
+      const userToEdit = karyawanList.find(k => k.email === editEmail);
+      if (userToEdit) {
+        handleOpenEdit(userToEdit);
+        setSearchParams({ tab: 'karyawan' }, { replace: true });
+      }
+    }
+  }, [editEmail, activeTab, karyawanList, setSearchParams]);
 
   // --- HANDLERS PROFIL & KEAMANAN ---
   const handleChoosePhoto = () => {

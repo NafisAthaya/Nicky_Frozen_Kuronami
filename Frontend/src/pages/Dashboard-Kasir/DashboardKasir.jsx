@@ -136,6 +136,7 @@ export default function DashboardKasir() {
         produk_id: item.id,
         qty: item.quantity,
       })),
+      shift: localStorage.getItem('shift') || null,
     };
 
     const response = await axiosInstance.post('/kasir/transaksi', payload);

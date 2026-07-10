@@ -18,6 +18,11 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (\Illuminate\Auth\AuthenticationException $e, Request $request) {
             if ($request->is('api/*') || $request->expectsJson()) {
+                \Illuminate\Support\Facades\Log::error('Authentication failed', [
+                    'url' => $request->fullUrl(),
+                    'method' => $request->method(),
+                    'auth_header' => $request->header('Authorization')
+                ]);
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Unauthenticated.'

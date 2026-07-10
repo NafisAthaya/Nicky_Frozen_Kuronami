@@ -62,6 +62,7 @@ class TransaksiController extends Controller
                 'uang_diterima' => $request->uang_diterima,
                 'kembalian' => max(0, $request->uang_diterima - ($request->total_tagihan ?? 0)),
                 'status' => 'berhasil',
+                'shift' => $request->shift ?? null,
             ]);
 
             foreach ($request->items as $item) {

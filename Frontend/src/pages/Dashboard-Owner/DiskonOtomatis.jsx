@@ -31,7 +31,7 @@ export default function DiskonOtomatis() {
       try {
         const [catsRes, cabangRes] = await Promise.all([
           axiosInstance.get('/owner/kategoris'),
-          axiosInstance.get('/owner/cabang') // Memanggil rute cabang
+          axiosInstance.get('/owner/cabang')
         ]);
         
         setCategories(catsRes.data || []);
@@ -39,8 +39,7 @@ export default function DiskonOtomatis() {
         const cbgData = cabangRes.data.data || [];
         setCabangList(cbgData);
         
-        // Otomatis pilih cabang pertama
-        if (cbgData.length > 0) {
+        if (cbgData.length > 0 && !selectedCabang) {
           setSelectedCabang(cbgData[0].id);
         }
       } catch (error) {
@@ -48,6 +47,8 @@ export default function DiskonOtomatis() {
       }
     };
     fetchInitialData();
+    window.addEventListener('global-sync', fetchInitialData);
+    return () => window.removeEventListener('global-sync', fetchInitialData);
   }, []);
 
   // 2. Ambil Aturan Diskon setiap kali Dropdown Cabang berubah

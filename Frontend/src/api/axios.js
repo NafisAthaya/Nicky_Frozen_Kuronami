@@ -18,5 +18,20 @@ axiosInstance.interceptors.request.use((config) => {
   }
   return config;
 });
+// Interceptor: Menangkap error 401 dan otomatis logout
+axiosInstance.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Jangan redirect jika error 401 berasal dari endpoint login itu sendiri (salah password)
+    const isLoginEndpoint = error.config && error.config.url === '/login';
+    
+    if (error.response && error.response.status === 401 && !isLoginEndpoint) {
+      console.warn("Token expired atau tidak valid. Memaksa logout...");
+      useAuthStore.getState().logoutSuccess();
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
 
 export default axiosInstance;

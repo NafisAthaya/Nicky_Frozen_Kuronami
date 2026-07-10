@@ -75,6 +75,7 @@ export default function KategoriItem() {
     setSuccessMessage(editCategoryData ? 'Kategori berhasil diperbarui.' : 'Kategori baru Anda telah berhasil tersimpan.');
     setIsSuccessModalOpen(true);
     loadData();
+    window.dispatchEvent(new Event('global-sync'));
   };
 
   const confirmDelete = async () => {
@@ -86,6 +87,7 @@ export default function KategoriItem() {
       setSuccessMessage(`Kategori "${deleteCategoryData.name}" berhasil dihapus.`);
       setIsSuccessModalOpen(true);
       loadData();
+      window.dispatchEvent(new Event('global-sync'));
     } catch (error) {
       toast.error("Gagal menghapus kategori");
     }

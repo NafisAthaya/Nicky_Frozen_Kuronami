@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\CabangController;
 // Public Routes (No Auth)
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
+Route::get('/password-notification', [AuthController::class, 'getPasswordNotification']);
 Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 
 // Protected Routes

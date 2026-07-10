@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import { HiOutlinePrinter, HiOutlineShare, HiOutlineDownload, HiOutlineDocumentText, HiOutlineCash, HiOutlineUser } from 'react-icons/hi';
 import logoNicky from '../../assets/logo-nicky-frozen.jpeg';
 import axiosInstance from '../../api/axios';
+import useAuthStore from '../../store/authStore';
 
 function formatRupiah(num) {
   if (num === 0) return 'Rp 0';
@@ -40,7 +41,6 @@ const BarcodePreview = ({ code }) => {
 export default function PopupStruk({
   onClose,
   transactionId = '#NF-000000',
-  kasir = 'Minji',
   items = [],
   subtotal = 0,
   diskonTotal = 0,
@@ -52,6 +52,10 @@ export default function PopupStruk({
   paymentDetail = {},
 }) {
   const receiptRef = useRef(null);
+  
+  // Ambil nama kasir yang sedang login
+  const user = useAuthStore((state) => state.user);
+  const kasir = user?.name || 'Kasir';
 
   const [settings, setSettings] = useState({
     judul_struk: 'Nicky Frozen Food',

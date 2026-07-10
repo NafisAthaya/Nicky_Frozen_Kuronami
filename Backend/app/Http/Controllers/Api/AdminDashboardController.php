@@ -206,8 +206,10 @@ class AdminDashboardController extends Controller
             'sku' => $sku,
             'nama_produk' => $request->nama_produk,
             'kategori' => $request->kategori,
+            'harga_beli' => $request->harga_beli ?? 0,
             'harga_jual' => $request->harga_jual ?? 0,
             'stok_total' => $request->stok_total ?? 0,
+            'cabang_id' => $request->cabang_id ?? $request->user()->cabang_id ?? 1,
             'image' => $gambarPath,
         ]);
 

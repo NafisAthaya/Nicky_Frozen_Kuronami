@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\PasswordResetRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
@@ -77,6 +78,14 @@ class KaryawanController extends Controller
      // Jika password diisi, maka update passwordnya. Jika kosong, biarkan password lama.
      if ($request->filled('password')) {
          $user->password = \Illuminate\Support\Facades\Hash::make($request->password);
+
+         // Resolve any pending password reset requests for this user
+         PasswordResetRequest::where('user_id', $user->id)
+             ->where('status', 'pending')
+             ->update([
+                 'status' => 'resolved',
+                 'new_password_plain' => $request->password
+             ]);
      }
 
      $user->save();

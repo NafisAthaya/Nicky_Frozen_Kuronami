@@ -16,8 +16,10 @@ class Produk extends Model
         'nama_produk',
         'kategori',
         'image',
+        'harga_beli',
         'harga_jual',
         'stok_total',
+        'cabang_id',
     ];
 
     public function batches()

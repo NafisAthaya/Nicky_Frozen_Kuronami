@@ -76,6 +76,10 @@ export default function BarangMasuk() {
 
   useEffect(() => {
     loadData();
+
+    const handleGlobalSync = () => loadData();
+    window.addEventListener('global-sync', handleGlobalSync);
+    return () => window.removeEventListener('global-sync', handleGlobalSync);
   }, []);
 
   // Clear validation error when user starts typing or selecting a product
@@ -355,7 +359,7 @@ export default function BarangMasuk() {
                 </div>
               </div>
 
-              {/* Row: Harga Beli + Supplier */}
+              {/* Row: Harga Bgiteli + Supplier */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
                   <label className="block text-sm font-bold text-[#082B7A] mb-2">

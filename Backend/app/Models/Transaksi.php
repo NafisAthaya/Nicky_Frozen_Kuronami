@@ -22,6 +22,7 @@ class Transaksi extends Model
         'uang_diterima',
         'kembalian',
         'status',
+        'shift',
     ];
 
     public function user()

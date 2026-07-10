@@ -35,20 +35,26 @@ class PengajuanStokController extends Controller
         ]);
 
         $user = $request->user();
+        $cabangId = ($user && $user->cabang_id) ? $user->cabang_id : 1;
+        
         $pengajuan = PengajuanStok::create([
-            'cabang_id' => ($user && $user->cabang_id) ? $user->cabang_id : 1, // fallback 1 for testing / owner
-            'user_id' => $user ? $user->id : 1, // fallback 1 for testing
+            'cabang_id' => $cabangId,
+            'user_id' => $user ? $user->id : 1,
             'produk_id' => $request->produk_id,
             'jumlah_request' => $request->jumlah,
             'catatan' => $request->catatan,
             'status' => 'pending'
         ]);
         
+        // Ambil nama produk untuk notifikasi
+        $produk = Produk::find($request->produk_id);
+        $namaProduk = $produk ? $produk->nama_produk : "ID {$request->produk_id}";
+        
         // Notify Owner
         Notifikasi::create([
-            'cabang_id' => $pengajuan->cabang_id,
+            'cabang_id' => $cabangId,
             'title' => 'Pengajuan Stok Baru',
-            'description' => "Terdapat pengajuan stok baru untuk produk ID {$pengajuan->produk_id} sejumlah {$pengajuan->jumlah_request}.",
+            'description' => "Terdapat pengajuan stok baru untuk produk {$namaProduk} sejumlah {$pengajuan->jumlah_request} unit.",
             'type' => 'pengajuan_stok',
             'is_read' => false
         ]);
@@ -82,7 +88,10 @@ class PengajuanStokController extends Controller
             
             $pesan = "Pengajuan stok untuk {$produk->nama_produk} sejumlah {$pengajuan->jumlah_request} unit telah disetujui. Silakan lakukan Restock secara manual di menu Barang Masuk.";
         } else {
-            $pesan = "Pengajuan stok ID {$pengajuan->id} ditolak.";
+            $produk = Produk::find($pengajuan->produk_id);
+            $namaProduk = $produk ? $produk->nama_produk : "ID {$pengajuan->produk_id}";
+            
+            $pesan = "Pengajuan stok untuk {$namaProduk} sejumlah {$pengajuan->jumlah_request} unit telah ditolak.";
         }
         
         // Notify Admin
@@ -90,7 +99,7 @@ class PengajuanStokController extends Controller
             'cabang_id' => $pengajuan->cabang_id,
             'title' => 'Status Pengajuan Stok',
             'description' => $pesan,
-            'type' => 'pengajuan_stok_status',
+            'type' => $request->status === 'disetujui' ? 'success' : 'danger',
             'is_read' => false
         ]);
 

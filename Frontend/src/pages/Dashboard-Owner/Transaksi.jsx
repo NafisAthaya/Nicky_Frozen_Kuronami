@@ -83,6 +83,8 @@ export default function Transaksi() {
     };
     
     fetchInitialData();
+    window.addEventListener('global-sync', fetchInitialData);
+    return () => window.removeEventListener('global-sync', fetchInitialData);
   }, []);
 
   // Ambil nama kasir dari state global
@@ -145,8 +147,9 @@ export default function Transaksi() {
             rounding: formatRupiah(trx.pembulatan_donasi || 0),
             metode: trx.metode_pembayaran.toUpperCase(),
             kasir: trx.user?.name || 'Kasir',
-            cabangName: trx.cabang?.nama_cabang || 'Cabang', // Ambil nama cabang dari relasi
+            cabangName: trx.cabang?.nama_cabang || 'Cabang',
             itemList: itemList,
+            shift: trx.shift, // Ambil nama shift dari database
           };
         });
 
@@ -169,17 +172,26 @@ export default function Transaksi() {
   const filteredTransactions = transactions.filter((trx) => {
     if (activeFilter === 'Semua Waktu') return true;
     
-    const trxHour = trx.rawDate.getHours();
-    
-    // Extract time from format "Shift X (06:00 - 10:00)"
-    const match = activeFilter.match(/\((\d{2}):\d{2} - (\d{2}):\d{2}\)/);
-    if (match) {
-      const startHour = parseInt(match[1], 10);
-      const endHour = parseInt(match[2], 10);
-      return trxHour >= startHour && trxHour < endHour;
+    const shiftNameMatch = activeFilter.match(/^(Shift \d+)/);
+    const filterShiftName = shiftNameMatch ? shiftNameMatch[1] : null;
+
+    // Jika transaksi memiliki kolom shift dari Kasir (fitur baru), cocokkan langsung stringnya
+    if (trx.shift && filterShiftName && trx.shift.includes(filterShiftName)) {
+      return true;
+    }
+
+    // Fallback: Untuk transaksi lama yang belum ada shift-nya, gunakan logika jam
+    if (!trx.shift) {
+      const trxHour = trx.rawDate.getHours();
+      const match = activeFilter.match(/\((\d{2}):\d{2} - (\d{2}):\d{2}\)/);
+      if (match) {
+        const startHour = parseInt(match[1], 10);
+        const endHour = parseInt(match[2], 10);
+        return trxHour >= startHour && trxHour < endHour;
+      }
     }
     
-    return true;
+    return false;
   });
 
   const handlePrint = () => {

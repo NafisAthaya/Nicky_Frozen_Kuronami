@@ -18,7 +18,6 @@ export default function CabangToko() {
   // Form states
   const [newName, setNewName] = useState('');
   const [newAddress, setNewAddress] = useState('');
-  const [newManager, setNewManager] = useState('');
   const [newHours, setNewHours] = useState('08:00 - 21:00');
 
   // Fetch Data
@@ -54,7 +53,6 @@ export default function CabangToko() {
       const payload = {
         nama_cabang: newName,
         alamat: newAddress,
-        manajer: newManager,
         jam_operasional: newHours
       };
 
@@ -63,15 +61,16 @@ export default function CabangToko() {
       
       setShowAddModal(false);
       setShowSuccessModal(true);
+      window.dispatchEvent(new Event('global-sync'));
 
       // Clear form
       setNewName('');
       setNewAddress('');
-      setNewManager('');
       setNewHours('08:00 - 21:00');
     } catch (error) {
       console.error("Gagal menyimpan cabang:", error);
-      toast.error('Gagal menyimpan data cabang ke server.');
+      const errMsg = error.response?.data?.message || error.message;
+      toast.error(`Gagal menyimpan data: ${errMsg}`);
     } finally {
       setIsSaving(false);
     }
@@ -279,18 +278,6 @@ export default function CabangToko() {
                   value={newAddress}
                   onChange={(e) => setNewAddress(e.target.value)}
                   className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all resize-none"
-                />
-              </div>
-
-              {/* Nama Manajer (Input Text Bukan Dropdown Dummy) */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Nama Manajer</label>
-                <input
-                  type="text"
-                  placeholder="Mis: Budi Santoso"
-                  value={newManager}
-                  onChange={(e) => setNewManager(e.target.value)}
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all"
                 />
               </div>
 

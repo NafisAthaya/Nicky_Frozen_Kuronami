@@ -5,15 +5,17 @@ import axiosInstance from '../../api/axios';
 const borderColors = {
   danger: 'border-l-red-500',
   warning: 'border-l-orange-500',
-  info: 'border-l-yellow-500',
+  info: 'border-l-blue-500',
   success: 'border-l-green-500',
+  pengajuan_stok: 'border-l-blue-500',
 };
 
 const iconBgs = {
   danger: 'bg-red-100 text-red-600',
   warning: 'bg-orange-100 text-orange-600',
-  info: 'bg-yellow-100 text-yellow-600',
+  info: 'bg-blue-100 text-blue-600',
   success: 'bg-green-100 text-green-600',
+  pengajuan_stok: 'bg-blue-100 text-blue-600',
 };
 
 // Helper untuk merender SVG Ikon berdasarkan tipe notifikasi
@@ -37,10 +39,12 @@ const renderIcon = (type) => {
           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
         </svg>
       );
-    default: // info
+    case 'info':
+    case 'pengajuan_stok':
+    default: // pending / menunggu
       return (
         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       );
   }

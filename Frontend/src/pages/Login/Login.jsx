@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
 import ForgotPasswordModal from './ForgotPasswordModal';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, Bell, X } from 'lucide-react';
 
 import bgLogin from '../../assets/login-bg.webp';
 import logoNicky from '../../assets/logo-nicky.png';
@@ -23,6 +23,11 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false); 
   const [toastMessage, setToastMessage] = useState(null);
 
+  // State untuk Notifikasi Reset Password
+  const [failedEmail, setFailedEmail] = useState(localStorage.getItem('failedLoginEmail') || '');
+  const [notifData, setNotifData] = useState(null);
+  const [showNotifPopup, setShowNotifPopup] = useState(false);
+
   const navigate = useNavigate();
   const loginSuccess = useAuthStore((state) => state.loginSuccess); 
 
@@ -32,6 +37,33 @@ export default function Login() {
       setToastMessage(null);
     }, 3000);
   };
+
+  // Polling untuk notifikasi reset password
+  useEffect(() => {
+    let interval;
+    const checkNotification = async () => {
+      if (!failedEmail) return;
+      try {
+        const response = await axiosInstance.get(`/password-notification?email=${failedEmail}`);
+        if (response.data?.success && response.data?.data) {
+          setNotifData(response.data.data);
+        } else {
+          setNotifData(null);
+        }
+      } catch (error) {
+        console.error("Gagal mengecek notifikasi", error);
+      }
+    };
+
+    if (failedEmail) {
+      checkNotification();
+      interval = setInterval(checkNotification, 10000); // Cek setiap 10 detik
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [failedEmail]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -69,6 +101,11 @@ export default function Login() {
       localStorage.setItem('loginTime', new Date().toISOString());
     }
 
+    // Bersihkan state error login
+    localStorage.removeItem('failedLoginEmail');
+    setFailedEmail('');
+    setNotifData(null);
+
     // Redirect sesuai role
     if (user.role === 'owner') {
       navigate('/owner');
@@ -85,6 +122,12 @@ export default function Login() {
 
     const errorMessage =
       error.response?.data?.message || 'Gagal terhubung ke server';
+      
+    if (errorMessage.toLowerCase().includes('salah')) {
+      // Simpan email yang gagal login
+      localStorage.setItem('failedLoginEmail', username);
+      setFailedEmail(username);
+    }
 
     showToast(errorMessage);
 
@@ -105,8 +148,53 @@ export default function Login() {
 
       {/* Login Card */}
       <div className="relative z-10 w-full max-w-md mx-4">
-        <div className="bg-white/95 backdrop-blur-md rounded-[32px] shadow-2xl p-10">
+        <div className="bg-white/95 backdrop-blur-md rounded-[32px] shadow-2xl p-10 relative">
           
+          {/* Notification Bell */}
+          {notifData && (
+            <div className="absolute top-6 right-6 z-20">
+              <button 
+                onClick={() => setShowNotifPopup(!showNotifPopup)}
+                className="relative p-2 bg-blue-50 hover:bg-blue-100 rounded-full transition-colors"
+              >
+                <Bell size={24} className="text-blue-700" />
+                <span className="absolute top-1 right-1 w-3 h-3 bg-red-500 border-2 border-white rounded-full"></span>
+              </button>
+
+              {/* Notification Popup */}
+              {showNotifPopup && (
+                <div className="absolute top-12 right-0 w-[280px] bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden animate-in fade-in slide-in-from-top-2">
+                  <div className="bg-blue-600 px-4 py-3 flex justify-between items-center">
+                    <h3 className="text-white font-semibold text-sm">Pemberitahuan</h3>
+                    <button onClick={() => setShowNotifPopup(false)} className="text-blue-200 hover:text-white">
+                      <X size={16} />
+                    </button>
+                  </div>
+                  <div className="p-4 flex flex-col gap-3 text-sm text-gray-700">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Email</span>
+                      <span className="font-medium text-gray-900">{notifData.email}</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Jabatan</span>
+                      <span className="font-medium text-gray-900">{notifData.role}</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Cabang Penempatan</span>
+                      <span className="font-medium text-gray-900">{notifData.cabang_nama}</span>
+                    </div>
+                    <div className="flex flex-col gap-1 pt-2 border-t border-gray-100 mt-1">
+                      <span className="text-xs text-blue-600 font-bold uppercase tracking-wider">Password Baru</span>
+                      <span className="font-mono font-bold text-lg text-slate-900 bg-slate-100 py-1 px-2 rounded-lg break-all inline-block mt-1">
+                        {notifData.new_password_plain}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Logo */}
           <div className="text-center mb-8">
             <div className="flex justify-center mb-5">
@@ -274,6 +362,10 @@ export default function Login() {
       <ForgotPasswordModal
         isOpen={showForgotModal}
         onClose={() => setShowForgotModal(false)}
+        onSuccess={(email) => {
+          setFailedEmail(email);
+          localStorage.setItem('failedLoginEmail', email);
+        }}
       />
 
       {/* Custom Toast Notification */}

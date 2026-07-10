@@ -10,7 +10,7 @@ class NotifikasiController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        $cabangId = $user->cabang_id;
+        $cabangId = $user->role === 'owner' ? null : $user->cabang_id;
 
         // 1. Sync Produk Kadaluarsa (H-7) ke dalam tabel Notifikasi
         $now = \Carbon\Carbon::now();
@@ -49,6 +49,11 @@ class NotifikasiController extends Controller
 
         // 2. Ambil Semua Notifikasi yang belum dibaca dari tabel
         $query = Notifikasi::where('is_read', false)->orderByDesc('created_at');
+        
+        if ($user->role !== 'owner') {
+            $query->where('title', '!=', 'Permintaan Reset Password');
+        }
+        
         if ($cabangId) {
             $query->where('cabang_id', $cabangId);
         }
@@ -72,10 +77,14 @@ class NotifikasiController extends Controller
     // Tandai semua notifikasi sudah dibaca
     public function markAllRead(Request $request)
     {
+        $user = $request->user();
         $query = Notifikasi::where('is_read', false);
         
-        if ($request->user()->cabang_id) {
-            $query->where('cabang_id', $request->user()->cabang_id);
+        if ($user->role !== 'owner') {
+            $query->where('title', '!=', 'Permintaan Reset Password');
+            if ($user->cabang_id) {
+                $query->where('cabang_id', $user->cabang_id);
+            }
         }
         
         $query->update(['is_read' => true]);

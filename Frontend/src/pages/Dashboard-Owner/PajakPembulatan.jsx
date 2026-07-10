@@ -28,8 +28,7 @@ export default function PajakPembulatan() {
         const list = response.data.data || [];
         setCabangList(list);
         
-        // Otomatis pilih cabang pertama sebagai default
-        if (list.length > 0) {
+        if (list.length > 0 && !selectedCabang) {
           setSelectedCabang(list[0].id);
         }
       } catch (error) {
@@ -38,6 +37,8 @@ export default function PajakPembulatan() {
       }
     };
     fetchCabang();
+    window.addEventListener('global-sync', fetchCabang);
+    return () => window.removeEventListener('global-sync', fetchCabang);
   }, []);
 
   // 2. Fetch Pengaturan setiap kali dropdown Cabang diganti

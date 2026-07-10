@@ -11,11 +11,16 @@ class CabangController extends Controller
     }
 
     public function store(Request $request) {
+        $request->validate([
+            'nama_cabang' => 'required|string|max:255',
+            'alamat' => 'required|string'
+        ]);
+
         $cabang = Cabang::create([
             'nama_cabang' => $request->nama_cabang,
             'alamat' => $request->alamat,
-            'manajer' => $request->manajer ?? 'Belum Ditentukan',
-            'jam_operasional' => $request->jam_operasional ?? '08:00 - 21:00',
+            'manajer' => empty($request->manajer) ? 'Belum Ditentukan' : $request->manajer,
+            'jam_operasional' => empty($request->jam_operasional) ? '08:00 - 21:00' : $request->jam_operasional,
             'status' => 'Buka'
         ]);
         return response()->json(['data' => $cabang]);

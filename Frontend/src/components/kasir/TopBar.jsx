@@ -103,10 +103,12 @@ export default function TopBar({ globalSearch, setGlobalSearch }) {
 
         {/* Sinkronisasi Global */}
         <button 
-          onClick={() => {
+          onClick={async () => {
             if (isSyncing) return;
             setIsSyncing(true);
+            // Dispatch event global agar semua halaman/komponen me-refresh datanya
             window.dispatchEvent(new Event('global-sync'));
+            // Tampilkan toast sinkronisasi
             setSyncToast(true);
             setTimeout(() => {
               setIsSyncing(false);
